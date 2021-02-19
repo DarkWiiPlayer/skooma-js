@@ -1,3 +1,12 @@
+const parseAttribute = (attribute) => {
+	if (typeof(attribute) == "string")
+		return attribute
+	else if ("join" in attribute)
+		return attribute.join(" ")
+	else
+		return JSON.stringify(attribute)
+}
+
 const parseArgs = (element, args) => {
 	for (arg of args)
 		if (typeof(arg) == "string")
@@ -8,11 +17,11 @@ const parseArgs = (element, args) => {
 			parseArgs(element, arg)
 		else
 			for (key in arg)
-				element.setAttribute(key, arg[key])
+				element.setAttribute(key.replace("_", "-"), parseAttribute(arg[key]))
 }
 
 export const node = (name, args) => {
-	const element = document.createElement(name)
+	const element = document.createElement(name.replace("_", "-"))
 	parseArgs(element, args)
 	return element
 }
