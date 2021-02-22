@@ -27,10 +27,4 @@ export const node = (name, args) => {
 	return element
 }
 
-export const html = new Proxy(Window, { get: (target, prop, receiver) => {
-	// This distinction is only helpful because javascript is fucking restarted
-	if (prop.search(/^[A-Z]/)+1)
-		return (arg) => node(prop, [arg])
-	else
-		return (...args) => node(prop, args)
-}})
+export const html = new Proxy(Window, { get: (target, prop, receiver) => { return (...args) => node(prop, args) }})
