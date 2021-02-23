@@ -21,10 +21,16 @@ const parseArgs = (element, args) => {
 				element.setAttribute(key.replace("_", "-"), parseAttribute(arg[key]))
 }
 
-export const node = (name, args) => {
-	const element = document.createElement(name.replace("_", "-"))
+const node = (name, args, xmlns) => {
+	if (xmlns)
+		element = document.createElementNS(xmlns, name.replace("_", "-"))
+	else
+		element = document.createElement(name.replace("_", "-"))
 	parseArgs(element, args)
 	return element
 }
 
-export const html = new Proxy(Window, { get: (target, prop, receiver) => { return (...args) => node(prop, args) }})
+const nameSpacedProxy = (xmlns) => new Proxy(Window, { get: (target, prop, receiver) => { return (...args) => node(prop, args, xmlns) }})
+
+export const html = nameSpacedProxy()
+export const svg = nameSpacedProxy("http://www.w3.org/2000/svg")
