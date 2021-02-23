@@ -8,7 +8,7 @@ const parseAttribute = (attribute) => {
 }
 
 const parseArgs = (element, args) => {
-	if ("content" in element) element = element.content
+	if (element.content) element = element.content
 	for (arg of args)
 		if (typeof(arg) == "string")
 			element.appendChild(document.createTextNode(arg))
