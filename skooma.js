@@ -9,7 +9,7 @@ const parseAttribute = (attribute) => {
 
 const parseArgs = (element, args) => {
 	if (element.content) element = element.content
-	for (arg of args)
+	for (let arg of args)
 		if (typeof(arg) == "string")
 			element.appendChild(document.createTextNode(arg))
 		else if ("nodeName" in arg)
@@ -22,6 +22,7 @@ const parseArgs = (element, args) => {
 }
 
 const node = (name, args, xmlns) => {
+	let element
 	if (xmlns)
 		element = document.createElementNS(xmlns, name.replace("_", "-"))
 	else
