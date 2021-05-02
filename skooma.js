@@ -18,15 +18,15 @@ const parseArgs = (element, args) => {
 			parseArgs(element, arg)
 		else
 			for (key in arg)
-				element.setAttribute(key.replace("_", "-"), parseAttribute(arg[key]))
+				element.setAttribute(key.replace(/([a-z])([A-Z])/g, "$1-$2"), parseAttribute(arg[key]))
 }
 
 const node = (name, args, xmlns) => {
 	let element
 	if (xmlns)
-		element = document.createElementNS(xmlns, name.replace("_", "-"))
+		element = document.createElementNS(xmlns, name.replace(/([a-z])([A-Z])/g, "$1-$2"))
 	else
-		element = document.createElement(name.replace("_", "-"))
+		element = document.createElement(name.replace(/([a-z])([A-Z])/g, "$1-$2"))
 	parseArgs(element, args)
 	return element
 }
