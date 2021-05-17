@@ -17,7 +17,7 @@ const parseArgs = (element, args) => {
 		else if ("length" in arg)
 			parseArgs(element, arg)
 		else
-			for (key in arg)
+			for (let key in arg)
 				element.setAttribute(key.replace(/([a-z])([A-Z])/g, "$1-$2"), parseAttribute(arg[key]))
 }
 
