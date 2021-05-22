@@ -18,7 +18,7 @@ const parseArgs = (element, args) => {
 			parseArgs(element, arg)
 		else
 			for (let key in arg)
-				element.setAttribute(key.replace(/([a-z])([A-Z])/g, "$1-$2"), parseAttribute(arg[key]))
+				element.setAttribute(key, parseAttribute(arg[key]))
 }
 
 const node = (name, args, xmlns) => {
