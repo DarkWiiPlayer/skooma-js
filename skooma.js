@@ -1,5 +1,5 @@
 const parseAttribute = (attribute) => {
-	if (typeof(attribute) == "string")
+	if (typeof attribute == "string" || typeof attribute == "number")
 		return attribute
 	else if ("join" in attribute)
 		return attribute.join(" ")
@@ -10,7 +10,7 @@ const parseAttribute = (attribute) => {
 const parseArgs = (element, args) => {
 	if (element.content) element = element.content
 	for (let arg of args)
-		if (typeof(arg) == "string")
+		if (typeof arg == "string" || typeof arg == "number")
 			element.appendChild(document.createTextNode(arg))
 		else if ("nodeName" in arg)
 			element.appendChild(arg)
