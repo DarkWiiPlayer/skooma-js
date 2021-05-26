@@ -18,7 +18,10 @@ const parseArgs = (element, args) => {
 			parseArgs(element, arg)
 		else
 			for (let key in arg)
-				element.setAttribute(key, parseAttribute(arg[key]))
+				if (typeof arg[key] == "function")
+					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), arg[key])
+				else
+					element.setAttribute(key, parseAttribute(arg[key]))
 }
 
 const node = (name, args, xmlns) => {
