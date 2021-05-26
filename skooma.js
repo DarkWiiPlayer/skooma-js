@@ -24,9 +24,9 @@ const parseArgs = (element, args) => {
 const node = (name, args, xmlns) => {
 	let element
 	if (xmlns)
-		element = document.createElementNS(xmlns, name.replace(/([a-z])([A-Z])/g, "$1-$2"))
+		element = document.createElementNS(xmlns, name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase())
 	else
-		element = document.createElement(name.replace(/([a-z])([A-Z])/g, "$1-$2"))
+		element = document.createElement(name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase())
 	parseArgs(element, args)
 	return element
 }
