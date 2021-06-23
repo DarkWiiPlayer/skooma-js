@@ -1,3 +1,15 @@
+/*
+A functional HTML generation library.
+
+Example:
+	html.label(
+		html.span("Delete everything", {class: ["warning", "important"]}),
+		html.button("Click", {onClick: e => document.body.innerHTML=""}),
+	)
+or
+	html.ul([1, 2, 3, 4, 5].map(x => html.li(x)), {class: "numbers"})
+*/
+
 const parseAttribute = (attribute) => {
 	if (typeof attribute == "string" || typeof attribute == "number")
 		return attribute
