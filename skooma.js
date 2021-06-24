@@ -31,7 +31,7 @@ const parseArgs = (element, args) => {
 		else
 			for (let key in arg)
 				if (typeof arg[key] == "function")
-					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), arg[key])
+					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), e => e.preventDefault() || arg[key](e))
 				else
 					element.setAttribute(key, parseAttribute(arg[key]))
 }
