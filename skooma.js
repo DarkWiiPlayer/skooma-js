@@ -19,7 +19,7 @@ const parseAttribute = (attribute) => {
 		return JSON.stringify(attribute)
 }
 
-const parseArgs = (element, args) => {
+const parseArgs = (element, ...args) => {
 	if (element.content) element = element.content
 	for (let arg of args)
 		if (typeof arg == "string" || typeof arg == "number")
@@ -27,10 +27,12 @@ const parseArgs = (element, args) => {
 		else if ("nodeName" in arg)
 			element.appendChild(arg)
 		else if ("length" in arg)
-			parseArgs(element, arg)
+			parseArgs(element, ...arg)
 		else
 			for (let key in arg)
-				if (typeof arg[key] == "function")
+				if (key == "shadowRoot")
+					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), arg[key])
+				else if (typeof arg[key] == "function")
 					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), e => e.preventDefault() || arg[key](e))
 				else
 					element.setAttribute(key, parseAttribute(arg[key]))
