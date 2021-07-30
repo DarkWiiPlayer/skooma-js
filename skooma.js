@@ -38,17 +38,18 @@ const parseArgs = (element, ...args) => {
 					element.setAttribute(key, parseAttribute(arg[key]))
 }
 
-const node = (name, args, xmlns) => {
+const node = (name, args, options) => {
 	let element
-	if (xmlns)
-		element = document.createElementNS(xmlns, name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase())
+	if (options.nameFilter) name = options.nameFilter(name)
+	if (options.xmlns)
+		element = document.createElementNS(options.xmlns, name)
 	else
-		element = document.createElement(name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase())
+		element = document.createElement(name)
 	parseArgs(element, args)
 	return element
 }
 
-const nameSpacedProxy = (xmlns) => new Proxy(Window, { get: (target, prop, receiver) => { return (...args) => node(prop, args, xmlns) }})
+const nameSpacedProxy = (options={}) => new Proxy(Window, { get: (target, prop, receiver) => { return (...args) => node(prop, args, options) }})
 
-export const html = nameSpacedProxy()
-export const svg = nameSpacedProxy("http://www.w3.org/2000/svg")
+export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()})
+export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
