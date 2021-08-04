@@ -49,7 +49,10 @@ const node = (name, args, options) => {
 	return element
 }
 
-const nameSpacedProxy = (options={}) => new Proxy(Window, { get: (target, prop, receiver) => { return (...args) => node(prop, args, options) }})
+const nameSpacedProxy = (options={}) => new Proxy(Window, {
+	get: (target, prop, receiver) => { return (...args) => node(prop, args, options) },
+	has: (target, prop) => true,
+})
 
 export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()})
 export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
