@@ -10,6 +10,16 @@ or
 	html.ul([1, 2, 3, 4, 5].map(x => html.li(x)), {class: "numbers"})
 */
 
+const keyToPropName = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
+
+const insertStyles = (rule, styles) => {
+	for (let [key, value] of Object.entries(styles))
+		if (typeof value == "undefined")
+			rule.removeProperty(keyToPropName(key))
+	else
+		rule.setProperty(keyToPropName(key), value.toString())
+}
+
 const parseAttribute = (attribute) => {
 	if (typeof attribute == "string" || typeof attribute == "number")
 		return attribute
@@ -30,7 +40,9 @@ const parseArgs = (element, ...args) => {
 			parseArgs(element, ...arg)
 		else
 			for (let key in arg)
-				if (key == "shadowRoot")
+				if (key == "style" && typeof(arg[key]=="object"))
+					insertStyles(element.style, arg[key])
+				else if (key == "shadowRoot")
 					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), arg[key])
 				else if (typeof arg[key] == "function")
 					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), e => e.preventDefault() || arg[key](e))
