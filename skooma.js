@@ -40,7 +40,7 @@ const parseArgs = (element, ...args) => {
 			parseArgs(element, ...arg)
 		else
 			for (let key in arg)
-				if (key == "style" && typeof(arg[key]=="object"))
+				if (key == "style" && typeof(arg[key])=="object")
 					insertStyles(element.style, arg[key])
 				else if (key == "shadowRoot")
 					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), arg[key])
