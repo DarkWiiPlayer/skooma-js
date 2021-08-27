@@ -29,22 +29,30 @@ const parseAttribute = (attribute) => {
 		return JSON.stringify(attribute)
 }
 
-const parseArgs = (element, ...args) => {
+const createPromiseNode = promise => {
+	const comment = document.createComment(`Awaiting ${promise}`)
+	promise.then(result => {parseArgs(comment.parentNode, comment, result); comment.remove()})
+	return comment
+}
+
+const parseArgs = (element, before, ...args) => {
 	if (element.content) element = element.content
 	for (let arg of args)
 		if (typeof arg == "string" || typeof arg == "number")
-			element.appendChild(document.createTextNode(arg))
+			element.insertBefore(document.createTextNode(arg), before)
 		else if ("nodeName" in arg)
-			element.appendChild(arg)
+			element.insertBefore(arg, before)
+		else if (arg.constructor?.name === "Promise")
+			element.insertBefore(createPromiseNode(arg), before)
 		else if ("length" in arg)
-			parseArgs(element, ...arg)
+			parseArgs(element, before, ...arg)
 		else
 			for (let key in arg)
 				if (key == "style" && typeof(arg[key])=="object")
 					insertStyles(element.style, arg[key])
 				else if (key == "shadowRoot")
-					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), arg[key])
-				else if (typeof arg[key] == "function")
+					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), null, arg[key])
+				else if (typeof arg[key] === "function")
 					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), e => e.preventDefault() || arg[key](e))
 				else if (arg[key] === true)
 					{if (!element.hasAttribute(key)) element.setAttribute(key, '')}
@@ -61,7 +69,7 @@ const node = (name, args, options) => {
 		element = document.createElementNS(options.xmlns, name)
 	else
 		element = document.createElement(name)
-	parseArgs(element, args)
+	parseArgs(element, null, args)
 	return element
 }
 
