@@ -53,7 +53,7 @@ const parseArgs = (element, before, ...args) => {
 				else if (key == "shadowRoot")
 					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), null, arg[key])
 				else if (typeof arg[key] === "function")
-					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), e => e.preventDefault() || arg[key](e))
+					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), arg[key])
 				else if (arg[key] === true)
 					{if (!element.hasAttribute(key)) element.setAttribute(key, '')}
 				else if (arg[key] === false)
