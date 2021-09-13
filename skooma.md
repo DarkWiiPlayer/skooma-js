@@ -43,3 +43,51 @@ html.div(style: {color: 'red'})
 
 Generators can be called with many arguments. Arrays get iterated recursively as
 if they were part of a flat argument list.
+
+## A few more examples:
+
+Create a Button that deletes itself:
+
+```js
+document.body.append(
+	html.button("Delete Me", {click: event => event.target.remove()})
+)
+```
+
+Turn a two-dimensional array into an HTML table:
+```js
+const table = rows =>
+	html.table(html.tbody(rows.map(
+		row => html.tr(row.map(
+			cell => html.rd(cell, {dataset: {
+				content: cell.toLowerCase(),
+			}})
+		))
+	)))
+```
+
+A list that you can add items to
+```js
+let list, input = ""
+document.body.append(html.div([
+	list=html.ul(),
+	html.input({type: 'text', input: e => input = e.target.value}),
+	html.button({click: event => list.append(html.li(input))}, "Add"),
+]))
+```
+
+A list that you can also delete items from
+```js
+const listItem = content => html.li(
+	html.span(content), " ", html.a("[remove]", {
+		click: event => event.target.closest("li").remove(),
+		style: { cursor: 'pointer', color: 'red' },
+	})
+)
+let list, input = ""
+document.body.append(html.div([
+	list=html.ul(),
+	html.input({type: 'text', input: e => input = e.target.value}),
+	html.button({click: event => list.append(listItem(input))}, "Add"),
+]))
+```
