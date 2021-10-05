@@ -35,14 +35,20 @@ html.div({foo: "bar"}, {foo: false})
 
 // Special keys:
 
-html.div(dataset: {foo: 1, bar: 2})
-// Creates a <div> with the attributes "data-foo" and "data-bar" set to 1 and 2
-html.div(style: {color: 'red'})
-// Creates a <div> with the "style" attribute set to "color: red"
+html.div(dataset: {foo: 1, bar: 2}) // Creates a <div> with the attributes "data-foo" and "data-bar" set to 1 and 2 html.div(style: {color: 'red'}) // Creates a <div> with the "style" attribute set to "color: red"
 ```
 
 Generators can be called with many arguments. Arrays get iterated recursively as
 if they were part of a flat argument list.
+
+## handle
+
+Since it is common for event handlers to call `preventDefault()`, skooma
+provides a helper function called `handle` with the following definition:
+
+```js
+fn => event => { event.preventDefault(); return fn(event) }
+```
 
 ## A few more examples:
 
