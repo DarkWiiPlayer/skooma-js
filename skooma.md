@@ -38,6 +38,13 @@ html.div({foo: "bar"}, {foo: false})
 html.div(dataset: {foo: 1, bar: 2}) // Creates a <div> with the attributes "data-foo" and "data-bar" set to 1 and 2 html.div(style: {color: 'red'}) // Creates a <div> with the "style" attribute set to "color: red"
 ```
 
+```js
+text("Hello, World")
+// Wraps document.createTextNode
+text()
+// Defaults to empty string
+```
+
 Generators can be called with many arguments. Arrays get iterated recursively as
 if they were part of a flat argument list.
 
