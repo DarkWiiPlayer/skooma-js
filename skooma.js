@@ -83,6 +83,14 @@ const nameSpacedProxy = (options={}) => new Proxy(Window, {
 	has: (target, prop) => true,
 })
 
+export const bind = register => transform => {
+	let element
+	element = transform(...register((...values) => {
+		element = element.replaceWith(transform(...values)) || element
+	}))
+	return element
+}
+
 export const handle = fn => event => { event.preventDefault(); return fn(event) }
 
 export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()})

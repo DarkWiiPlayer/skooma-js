@@ -38,15 +38,44 @@ html.div({foo: "bar"}, {foo: false})
 html.div(dataset: {foo: 1, bar: 2}) // Creates a <div> with the attributes "data-foo" and "data-bar" set to 1 and 2 html.div(style: {color: 'red'}) // Creates a <div> with the "style" attribute set to "color: red"
 ```
 
+Generators can be called with many arguments. Arrays get iterated recursively as
+if they were part of a flat argument list.
+
 ```js
 text("Hello, World")
 // Wraps document.createTextNode
 text()
-// Defaults to empty string
+// Defaults to empty string instead of erroring
+text(null)
+// Non-string arguments still error
 ```
 
-Generators can be called with many arguments. Arrays get iterated recursively as
-if they were part of a flat argument list.
+## bind
+
+This function offers a generic mechanism for binding elements to dynamic state.
+It takes a register function that satisfies the following criteria:
+
+- It returns an initial state as an array
+- It accepts a callback function
+- On state change, it calls it with the new state as its arguments
+
+And returns a second function, which takes a transformation (another functuion)
+from input state to DOM node. This transformation will be used to create an
+initial element from the initial state, which will be returned.
+
+On every state change, the transform ation will be called on the new state to
+generate a new DOM Node, which replace the current one.
+
+If the current node is not in the DOM yet, nothing will happen, and the new node
+is thrown away. This "stale" node will not update until it has been placed in
+the DOM *and* the next state change occurs.
+
+```js
+bind(register)(html.div)
+// Returns a div element bound to register
+// Assuming register is a higher order function
+// and html.div is a transformation from input state to a <div> node
+```
 
 ## handle
 
