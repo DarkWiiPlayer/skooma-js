@@ -66,16 +66,16 @@ initial element from the initial state, which will be returned.
 On every state change, the transform ation will be called on the new state to
 generate a new DOM Node, which replace the current one.
 
-If the current node is not in the DOM yet, nothing will happen, and the new node
-is thrown away. This "stale" node will not update until it has been placed in
-the DOM *and* the next state change occurs.
-
 ```js
 bind(register)(html.div)
 // Returns a div element bound to register
 // Assuming register is a higher order function
 // and html.div is a transformation from input state to a <div> node
 ```
+
+Since references to the bound element can become stale, a `current` property
+is set on every element that returns the current element. This will keep working
+even after several state changes.
 
 ## handle
 

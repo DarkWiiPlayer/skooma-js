@@ -85,10 +85,13 @@ const nameSpacedProxy = (options={}) => new Proxy(Window, {
 
 export const bind = register => transform => {
 	let element
+	const addCurrent = current => Object.defineProperty(current, 'current', {get: () => element})
 	element = transform(...register((...values) => {
-		element = element.replaceWith(transform(...values)) || element
+		const old = element
+		element = addCurrent(transform(...values))
+		old.replaceWith(element)
 	}))
-	return element
+	return addCurrent(element)
 }
 
 export const handle = fn => event => { event.preventDefault(); return fn(event) }
