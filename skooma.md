@@ -48,7 +48,16 @@ text()
 // Defaults to empty string instead of erroring
 text(null)
 // Non-string arguments still error
+
+text`Hello, World!`
+// returns a new document fragment containing the text node "Hello, World!"
+text`Hello, ${user}!`
+// returns a document fragment containing 3 nodes:
+// "Hello, ", the interpolated value of `user` and "!"
 ```
+
+When used with templates, `text` tries to append any interpolated values into
+the document fragment as is and without checking them.
 
 ## bind
 
