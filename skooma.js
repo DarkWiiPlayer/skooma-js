@@ -87,9 +87,15 @@ export const bind = register => transform => {
 	let element
 	const addCurrent = current => Object.defineProperty(current, 'current', {get: () => element})
 	element = transform(...register((...values) => {
-		const old = element
-		element = addCurrent(transform(...values))
-		old.replaceWith(element)
+		try {
+			const next = transform(...values)
+			if (next) {
+				element.replaceWith(addCurrent(next))
+				element = next
+			}
+		} catch (error) {
+			console.error(error)
+		}
 	}))
 	return addCurrent(element)
 }
