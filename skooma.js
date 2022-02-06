@@ -83,21 +83,19 @@ const nameSpacedProxy = (options={}) => new Proxy(Window, {
 	has: (target, prop) => true,
 })
 
-export const bind = register => transform => {
+export const bind = transform => {
 	let element
-	const addCurrent = current => Object.defineProperty(current, 'current', {get: () => element})
-	element = transform(...register((...values) => {
-		try {
-			const next = transform(...values)
-			if (next) {
-				element.replaceWith(addCurrent(next))
-				element = next
-			}
-		} catch (error) {
-			console.error(error)
+	const inject = next => Object.defineProperty(next, 'current', {get: () => element})
+	const update = (...data) => {
+		const next = transform(...data)
+		if (next) {
+			console.log(element)
+			if (element) element.replaceWith(next)
+			element = inject(next)
+			return element
 		}
-	}))
-	return addCurrent(element)
+	}
+	return update
 }
 
 export const handle = fn => event => { event.preventDefault(); return fn(event) }
@@ -116,6 +114,6 @@ const textFromTemplate = (literals, items) => {
 }
 
 export const text = (data="", ...items) =>
-	typeof data == "string"
-		? document.createTextNode(data)
-		: textFromTemplate(data, items)
+	typeof data == "object" && "at" in data
+		? textFromTemplate(data, items)
+		: document.createTextNode(data)
