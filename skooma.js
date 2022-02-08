@@ -89,7 +89,6 @@ export const bind = transform => {
 	const update = (...data) => {
 		const next = transform(...data)
 		if (next) {
-			console.log(element)
 			if (element) element.replaceWith(next)
 			element = inject(next)
 			return element
