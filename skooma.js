@@ -71,13 +71,16 @@ const parseArgs = (element, before, ...args) => {
 					element.setAttribute(key, parseAttribute(arg[key]))
 }
 
-const node = (name, args, options) => {
+const nop = object => object
+const node = (_name, args, options) => {
 	let element
-	if (options.nameFilter) name = options.nameFilter(name)
+	const [name, custom] = _name
+		.match(/[^$]+/g)
+		.map(options.nameFilter ?? nop)
 	if (options.xmlns)
-		element = document.createElementNS(options.xmlns, name)
+		element = document.createElementNS(options.xmlns, name, {is: custom})
 	else
-		element = document.createElement(name)
+		element = document.createElement(name, {is: custom})
 	parseArgs(element, null, args)
 	return element
 }
