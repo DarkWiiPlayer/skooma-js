@@ -12,6 +12,8 @@ or
 
 const keyToPropName = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
 
+export const empty = Symbol("Explicit empty argument for Skooma")
+
 const insertStyles = (rule, styles) => {
 	for (let [key, value] of Object.entries(styles))
 		if (typeof value == "undefined")
@@ -37,12 +39,10 @@ const createPromiseNode = promise => {
 
 const parseArgs = (element, before, ...args) => {
 	if (element.content) element = element.content
-	for (let arg of args)
+	for (let arg of args) if (arg !== empty)
 		if (typeof arg == "string" || typeof arg == "number")
 			element.insertBefore(document.createTextNode(arg), before)
-		else if (arg === undefined)
-			console.warn(`Argument is ${typeof arg}`, element)
-		else if (arg === null)
+		else if (arg === undefined || arg == null)
 			console.warn(`Argument is ${typeof arg}`, element)
 		else if (typeof arg == "function")
 			arg(element)
