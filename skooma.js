@@ -31,12 +31,6 @@ const parseAttribute = (attribute) => {
 		return JSON.stringify(attribute)
 }
 
-const createPromiseNode = promise => {
-	const comment = document.createComment(`Awaiting ${promise}`)
-	promise.then(result => {parseArgs(comment.parentNode, comment, result); comment.remove()})
-	return comment
-}
-
 const parseArgs = (element, before, ...args) => {
 	if (element.content) element = element.content
 	for (let arg of args) if (arg !== empty)
@@ -48,8 +42,6 @@ const parseArgs = (element, before, ...args) => {
 			arg(element)
 		else if ("nodeName" in arg)
 			element.insertBefore(arg, before)
-		else if (arg.constructor?.name === "Promise")
-			element.insertBefore(createPromiseNode(arg), before)
 		else if ("length" in arg)
 			parseArgs(element, before, ...arg)
 		else
