@@ -25,7 +25,7 @@ const insertStyles = (rule, styles) => {
 const parseAttribute = (attribute) => {
 	if (typeof attribute == "string" || typeof attribute == "number")
 		return attribute
-	else if ("join" in attribute)
+	else if (attribute && "join" in attribute)
 		return attribute.join(" ")
 	else
 		return JSON.stringify(attribute)
