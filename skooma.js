@@ -31,6 +31,19 @@ const parseAttribute = (attribute) => {
 		return JSON.stringify(attribute)
 }
 
+
+const defined = (value, fallback) => typeof value != "undefined" ? value : fallback
+const getCustom = args => String(
+	args.reduce(
+		(current, argument) => Array.isArray(argument)
+			? defined(getCustom(argument), current)
+			: (argument && typeof argument == "object")
+			? defined(argument.is, current)
+			: current
+		,null
+	)
+)
+
 const parseArgs = (element, before, ...args) => {
 	if (element.content) element = element.content
 	for (let arg of args) if (arg !== empty)
@@ -64,11 +77,9 @@ const parseArgs = (element, before, ...args) => {
 }
 
 const nop = object => object
-const node = (_name, args, options) => {
+const node = (name, args, options) => {
 	let element
-	const [name, custom] = _name
-		.match(/[^$]+/g)
-		.map(options.nameFilter ?? nop)
+	let custom = getCustom(args)
 	if (options.xmlns)
 		element = document.createElementNS(options.xmlns, name, {is: custom})
 	else
