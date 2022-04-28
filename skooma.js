@@ -80,6 +80,7 @@ const nop = object => object
 const node = (name, args, options) => {
 	let element
 	let custom = getCustom(args)
+	if ("nameFilter" in options) name = options.nameFilter(name)
 	if (options.xmlns)
 		element = document.createElementNS(options.xmlns, name, {is: custom})
 	else
