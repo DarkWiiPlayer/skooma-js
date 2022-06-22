@@ -113,6 +113,13 @@ export const handle = fn => event => { event.preventDefault(); return fn(event) 
 export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()})
 export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
 
+export const fragment = (...elements) => {
+	const fragment = new DocumentFragment()
+	for (element of elements)
+		fragment.append(element)
+	return fragment
+}
+
 const textFromTemplate = (literals, items) => {
 	const fragment = new DocumentFragment()
 	for (const key in items) {
