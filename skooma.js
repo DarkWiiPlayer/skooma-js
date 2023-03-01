@@ -50,7 +50,7 @@ const parseArgs = (element, before, ...args) => {
 		if (typeof arg == "string" || typeof arg == "number")
 			element.insertBefore(document.createTextNode(arg), before)
 		else if (arg === undefined || arg == null)
-			console.warn(`Argument is ${typeof arg}`, element)
+			console.warn(`An argument of type ${typeof arg} has been ignored`, element)
 		else if (typeof arg == "function")
 			arg(element)
 		else if ("nodeName" in arg)
