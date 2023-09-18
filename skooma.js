@@ -15,7 +15,7 @@ const keyToPropName = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g,
 export const empty = Symbol("Explicit empty argument for Skooma")
 
 const insertStyles = (rule, styles) => {
-	for (let [key, value] of Object.entries(styles))
+	for (const [key, value] of Object.entries(styles))
 		if (typeof value == "undefined")
 			rule.removeProperty(keyToPropName(key))
 	else
@@ -46,7 +46,7 @@ const getCustom = args => String(
 
 const parseArgs = (element, before, ...args) => {
 	if (element.content) element = element.content
-	for (let arg of args) if (arg !== empty)
+	for (const arg of args) if (arg !== empty)
 		if (typeof arg == "string" || typeof arg == "number")
 			element.insertBefore(document.createTextNode(arg), before)
 		else if (arg === undefined || arg == null)
@@ -58,11 +58,11 @@ const parseArgs = (element, before, ...args) => {
 		else if ("length" in arg)
 			parseArgs(element, before, ...arg)
 		else
-			for (let key in arg)
+			for (const key in arg)
 				if (key == "style" && typeof(arg[key])=="object")
 					insertStyles(element.style, arg[key])
 				else if (key == "dataset" && typeof(arg[key])=="object")
-					for (let [key2, value] of Object.entries(arg[key]))
+					for (const [key2, value] of Object.entries(arg[key]))
 						element.dataset[key2] = parseAttribute(value)
 				else if (key == "shadowRoot")
 					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), null, arg[key])
@@ -76,10 +76,9 @@ const parseArgs = (element, before, ...args) => {
 					element.setAttribute(key, parseAttribute(arg[key]))
 }
 
-const nop = object => object
 const node = (name, args, options) => {
 	let element
-	let custom = getCustom(args)
+	const custom = getCustom(args)
 	if ("nameFilter" in options) name = options.nameFilter(name)
 	if (options.xmlns)
 		element = document.createElementNS(options.xmlns, name, {is: custom})
@@ -90,8 +89,8 @@ const node = (name, args, options) => {
 }
 
 const nameSpacedProxy = (options={}) => new Proxy(Window, {
-	get: (target, prop, receiver) => { return (...args) => node(prop, args, options) },
-	has: (target, prop) => true,
+	get: (_target, prop, _receiver) => { return (...args) => node(prop, args, options) },
+	has: (_target, _prop) => true,
 })
 
 export const bind = transform => {
@@ -115,7 +114,7 @@ export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
 
 export const fragment = (...elements) => {
 	const fragment = new DocumentFragment()
-	for (element of elements)
+	for (const element of elements)
 		fragment.append(element)
 	return fragment
 }
