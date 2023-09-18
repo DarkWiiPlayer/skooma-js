@@ -10,9 +10,9 @@ or
 	html.ul([1, 2, 3, 4, 5].map(x => html.li(x)), {class: "numbers"})
 */
 
-const keyToPropName = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
-
 export const empty = Symbol("Explicit empty argument for Skooma")
+
+const keyToPropName = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
 
 const insertStyles = (rule, styles) => {
 	for (const [key, value] of Object.entries(styles))
@@ -93,6 +93,11 @@ const nameSpacedProxy = (options={}) => new Proxy(Window, {
 	has: (_target, _prop) => true,
 })
 
+export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()})
+export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
+
+// Other utility exports
+
 export const bind = transform => {
 	let element
 	const inject = next => Object.defineProperty(next, 'current', {get: () => element})
@@ -107,11 +112,10 @@ export const bind = transform => {
 	return update
 }
 
-export const handle = fn => event => { event.preventDefault(); return fn(event) }
+// Wraps an event handler in a function that calls preventDefault on the event
+export const handle = fn => event => { fn(event); event.preventDefault() }
 
-export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()})
-export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
-
+// Wraps a list of elements in a document fragment
 export const fragment = (...elements) => {
 	const fragment = new DocumentFragment()
 	for (const element of elements)
@@ -119,6 +123,9 @@ export const fragment = (...elements) => {
 	return fragment
 }
 
+// Turns a template literal into document fragment.
+// Strings are returned as text nodes.
+// Elements are inserted in between.
 const textFromTemplate = (literals, items) => {
 	const fragment = new DocumentFragment()
 	for (const key in items) {
