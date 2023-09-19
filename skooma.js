@@ -81,9 +81,9 @@ const node = (name, args, options) => {
 	const custom = getCustom(args)
 	if ("nameFilter" in options) name = options.nameFilter(name)
 	if (options.xmlns)
-		element = document.createElementNS(options.xmlns, name, {is: custom})
+		element = document.createElementNS(options.xmlns, name, custom ?? {is: custom})
 	else
-		element = document.createElement(name, {is: custom})
+		element = document.createElement(name, custom ?? {is: custom})
 	parseArgs(element, null, args)
 	return element
 }
@@ -104,9 +104,14 @@ export const bind = transform => {
 	const update = (...data) => {
 		const next = transform(...data)
 		if (next) {
-			if (element) element.replaceWith(next)
-			element = inject(next)
-			return element
+			if (typeof next == "string") {
+				element.innerText = next
+				return element
+			} else {
+				if (element) element.replaceWith(next)
+				element = inject(next)
+				return element
+			}
 		}
 	}
 	return update
