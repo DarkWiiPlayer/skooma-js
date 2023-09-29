@@ -1,0 +1,6 @@
+{
+  "name": "skooma",
+  "version": "1.0.0",
+  "module": "skooma.js",
+  "type": "module"
+}
