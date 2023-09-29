@@ -3,43 +3,61 @@
 A functional-friendly helper library for procedural DOM generation and
 templating.
 
-Skooma provides two proxies: `html` and `svg`.
+## Overview
+
+```js
+import {html} from "skooma.js"
+
+document.body.append(html.div(
+    html.h1("Hello, World!"),
+    html.p("Skooma is cool", {class: "amazing"}),
+    html.button("Show Proof", click: event => { alert("It's true!") })
+))
+```
 
 ## Interface / Examples
 
+### HTML generation
+
 ```js
 html.div()
-// Creates a <div> element
+// Creates a <div></div> element
 html.div("hello", "world")
-// Creates a <div> element with the content "helloworld"
+// <div>helloworld</div>
 html.div(html.span())
-// Creates a <div> element with a nested <span> element
+// <div><span></span></div>
 html.div([html.span(), html.span()])
-// Creates a <div> element with two nested <span> elements
+// <div> <span></span> <span></span> </div>
 html.div({class: "foo"})
-// Creates a <div> with the class "foo"
+// <div class="foo"></div>
 html.div({class: ["foo", "bar"]})
-// Creates a <div> with the classes "foo" and "bar"
+// <div class="foo bar"></div>
 html.div({click: 1})
-// Creates a <div> with the attribute "click" set to "1"
+// <div click="1"></div>
 html.div({click: event => console.log(event.target)})
 // Creates a <div> with an event listener for "click" events
 html.div(player: {username: "KhajiitSlayer3564"})
 // Creates a <div> with the attribute "player" set to a JSON-encoded Object
-html.div(self => self.innerHTML = "Hello, World!")
-// Creates a <div> and passes it to a function that sets its inner HTML
+html.div("Old content", self => self.innerText = "Hello, World!")
+// Creates a <div> and passes it to a function for further processing
 html.div({foo: true})
-// Creates a <div>, adds the attribute "foo"
+// <div foo></div>
 html.div({foo: "bar"}, {foo: false})
-// Creates a <div>, sets the "foo" attribute to "bar", then removes it again
+// <div></div>
 
 // Special keys:
 
-html.div(dataset: {foo: 1, bar: 2}) // Creates a <div> with the attributes "data-foo" and "data-bar" set to 1 and 2 html.div(style: {color: 'red'}) // Creates a <div> with the "style" attribute set to "color: red"
+html.div({dataset: {foo: 1, bar: 2}})
+// <div data-foo="1" data-bar="2"></div>
+
+html.div({shadowRoot: html.span("Shadow root content")})
+// Attaches a shadow root with a span
 ```
 
 Generators can be called with many arguments. Arrays get iterated recursively as
 if they were part of a flat argument list.
+
+### Generating Text Nodes
 
 ```js
 text("Hello, World")
@@ -54,10 +72,9 @@ text`Hello, World!`
 text`Hello, ${user}!`
 // returns a document fragment containing 3 nodes:
 // "Hello, ", the interpolated value of `user` and "!"
+text`Hello, ${html.b(user)}!`
+// Text node for Hello, the <b> tag with the user's name, and a text node for !
 ```
-
-When used with templates, `text` tries to append any interpolated values into
-the document fragment as is and without checking them.
 
 ## bind
 
