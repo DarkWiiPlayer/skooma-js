@@ -1,0 +1,45 @@
+:root {
+	--corner-radius: 2px;
+}
+[contenteditable] { white-space: pre }
+
+#elevator-pitch p, p.important {
+	font-size: 1.2em;
+}
+
+page-hero {
+	background-image:
+		radial-gradient(ellipse at 100% -40%, #fff0, #ccaaff06 70%, #fff0 70%),
+		radial-gradient(ellipse at -40% -20%, #fff0, #bb88ff02 60%, #fff0 60%),
+		radial-gradient(ellipse at 180% 180%, #fff0, #bb88ff02 60%, #fff0 60%),
+		linear-gradient(to top left, #a2f1, transparent),
+		linear-gradient(to top right, #c2d1, transparent);
+	&::after {
+		content: '';
+		display: block;
+		position: absolute;
+		bottom: 0;
+		height: .2rem;
+		left: 0;
+		right: 0;
+		background-image: linear-gradient(to right, #0660, #0f6, #0660);
+		background-image: linear-gradient(to right in hsl, #6060, #f0f, #6060);
+		filter: saturate(.4) opacity(.2);
+	}
+}
+
+skooma-showcase {
+	--padding: .6em;
+	border-radius: var(--corner-radius);
+	padding: var(--padding);
+	background-color: #fff1;
+	--hr-color: var(--primary-4);
+}
+
+type-writer {
+	font-weight: bold;
+	&::after {
+		content: "|";
+		opacity: 0.5;
+	}
+}

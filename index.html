@@ -1,0 +1,430 @@
+<html theme=dark>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+
+	<script type="module" src="https://cdn.jsdelivr.net/gh/darkwiiplayer/components@master/TypeWriter.js"></script>
+
+	<style>
+		@import
+		/* url('https://cdn.jsdelivr.net/gh/darkwiiplayer/css@main/all.css') */
+		url('https://darkwiiplayer.github.io/css/all.css') layer(framework);
+		@import
+		/* url('https://cdn.jsdelivr.net/gh/darkwiiplayer/css@main/schemes/talia.css') */
+		url('https://darkwiiplayer.github.io/css/schemes/talia.css') layer(theme);
+		@import url('styles.css') layer(site);
+
+		.jsdelivr-badge {
+			filter: saturate(.4) hue-rotate(250deg);
+			border-radius: .2em;
+		}
+	</style>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+
+	<script>
+		const scrollHook = () => {
+			document.body.setAttribute("scroll", window.scrollY)
+		}
+		window.addEventListener("scroll", scrollHook)
+		document.addEventListener("readystatechange", scrollHook)
+
+		const observer = new IntersectionObserver(events => {}, {
+			rootMargin: '-1px 0px 0px 0px',
+			threshold: [1]
+		})
+	</script>
+
+	<script type="module">
+		import hljs from 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/es/highlight.min.js';
+		import lang_html from "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/es/languages/xml.min.js"
+
+		hljs.registerLanguage("html", lang_html)
+
+		document.querySelectorAll('code[lang="js"]').forEach(code => {
+			code.innerHTML = hljs.highlight("javascript", code.innerText).value
+		})
+	</script>
+
+	<script type="module">
+		import "./js/SkoomaShowcase.js"
+	</script>
+
+	<a name=top></a>
+
+	<header class="fixed">
+		<nav class="bar">
+			<ul>
+				<li><a href="#top">Top</a></li>
+				<li><a href="#getting-started">Getting Started</a></li>
+				<li><a href="https://github.com/darkwiiplayer/skooma-js">GitHub</a></li>
+				<li><a href="https://www.npmjs.com/package/skooma">npm</a></li>
+			</ul>
+		</nav>
+		<img class="jsdelivr-badge" src="https://data.jsdelivr.com/v1/package/npm/skooma/badge">
+	</header>
+
+	<page-hero cover=60>
+		<!-- <img src="https://picsum.photos/1920/1080"> -->
+		<hgroup>
+			<h1 style="font-size: 6vw">Skooma</span></h1>
+			<code lang="js">import { html } from "skooma.js"</code>
+			<p>
+				A new way of building
+				<type-writer loop>
+					<span>HTML</span>,
+					<span>components</span> and
+					<span>applications</span>
+				</type-writer>
+				in vanilla JavaScript
+			</p>
+		</hgroup>
+		<flex-row gap=1>
+			<!--<a class="button" href="#elevator-pitch">Elevator Pitch</a>-->
+			<a class="button" href="#getting-started">Get Started</a>
+		</flex-row>
+	</page-hero>
+
+	<vertical-spacer style="height: 6rem"></vertical-spacer>
+
+	<main>
+		<section id="elevator-pitch" class="content-width">
+			<h2>Elevator Pitch</h2>
+
+			<p>
+				Skooma lets you <u>elegantly</u> express nested DOM structures in <u>plain JavaScript</u>.
+				<br>
+				It makes your code more <u>declarative</u> without re-inventing language features like loops and conditions.
+			</p>
+
+			<skooma-showcase>
+	<code><div contenteditable="false">return html.p(
+		"Text Node",
+		html.br(),
+		html.b("HTML Node")
+	)</div></code>
+			</skooma-showcase>
+
+			<p>
+				Skooma aims to be what <code>document.createElement</code> should have been.
+				It creates a node, sets classes and attributes, inserts content and attaches event listeners.
+			</p>
+
+			<p>Some key characteristics:</p>
+			<ul>
+				<li> <b>No build steps required</b>
+				<li> <b>Plays nice with web components</b>
+				<li> <b>Just vanilla JavaScript</b>
+				<li> Code mirrors output in structure
+				<li> Single Responsibility: Generating HTML
+				<li> No closing tags
+			</ul>
+		</section>
+
+		<section id="getting-started" class="content-width">
+			<h2>Getting Started</h2>
+
+			<section>
+				<p class="important">
+					Trying out skooma is super easy!<br>
+					Just import the <code>html</code> export into your script and start generating DOM nodes.
+				</p>
+
+				<pre><code lang=js>import {html} from "https://cdn.jsdelivr.net/npm/skooma@1.3.1/skooma.min.js"</code></pre>
+			</section>
+
+			<section>
+				<p>
+					To create elements, skooma exposes the <code>html</code> proxy.
+					Accessing this proxy with any value will return a node factory function.
+					<br>
+					In its most basic form, these functions will simply generate a new DOM node
+					of the respective type.
+				</p>
+
+				<skooma-showcase preview="false">
+					<code>
+						<div contenteditable="false">return html.div()</div>
+					</code>
+				</skooma-showcase>
+
+				<p>
+					If you quickly want to render your HTML to a website to see the result,
+					the component helper found in <code>sckooma/state.js</code> makes this a lot easier.<br>
+					This wrapper registers a new custom element to insert the results of a function in your document.
+				</p>
+
+				<pre><code lang=js>import {component} from "https://cdn.jsdelivr.net/npm/skooma@1.3.1/state.min.js"
+const myComponent = () =&gt; html.div("Rendered Component")
+component(myComponent) //Registers it as &lt;my-component&gt;</code></pre>
+
+				<p>
+					This wrapper also provides some state-management features that will be described in a separate section.
+				</p>
+
+				<p>
+					Of course you can also just call <code lang=js>document.body.append(html.span("My Text"))</code> in your script.
+				</p>
+			</section>
+		</section>
+
+		<section class="content-width">
+			<h3>Basic DOM generation</h3>
+
+			<section>
+				<p>
+					Content can be added to a node by simply passing it as arguments to the function.
+					String arguments get inserted as text nodes, and DOM nodes are simply appended to the child list.
+					<br>
+					This results in an easy way to compose nested DOM structures.
+				</p>
+
+				<skooma-showcase preview="false">
+					<code>
+<div contenteditable="false">return html.span(
+	"Testing ",
+	html.u("stuff")
+)</div>
+					</code>
+				</skooma-showcase>
+			</section>
+
+			<section>
+				<p>
+					Attributes are added by passing an object to the function,
+					where each key-value pair gets turned into an attribute on
+					the generated node.
+				</p>
+
+				<skooma-showcase preview="false">
+					<code>
+<div contenteditable="false">return html.span({
+	id: "warning",
+	class: ["danger", "bold"],
+	// Arrays get joined with spaces
+})</div>
+					</code>
+				</skooma-showcase>
+			</section>
+
+			<section>
+				<p>
+					When trying to assign a function as the value of an attribute,
+					skooma will instead register that function as an event handler
+					with the attribute name being used the event name instead.
+				</p>
+
+				<skooma-showcase code="false">
+					<code>
+<div contenteditable="false">return html.button(
+	"Click Me!",
+	{ click: event => {
+		alert("Button clicked :3")
+	} }
+)</div>
+					</code>
+				</skooma-showcase>
+			</section>
+		</section>
+
+		<section class="content-width">
+
+			<h2>Leveraging JS features</h2>
+
+			<p>
+				When generating HTML with skooma, you never stop writing JavaScript.
+				This means that all JavaScript features are available anywhere
+				inside your code. Functions like <code>filter</code> or <code>map</code>
+				can be applied directly to your data, nodes can be assigned to
+				variables right as you create them, and the syntax is always 100%
+				pure javascript as most browsers and dev tools understand it.
+			</p>
+
+			<skooma-showcase code="false">
+				<code>
+<div contenteditable="false">return html.ul(
+	["u", "b", "i"].map(
+		type => html.li(html[type](
+			`&lt;${type}&gt; element`
+		))
+	)
+)</div>
+				</code>
+			</skooma-showcase>
+
+			<p>
+				A more complex example that assembles an array of objects into a table:
+			</p>
+
+			<skooma-showcase code="false">
+				<code>
+<div contenteditable="false">const table = (...rows) =&gt; {
+	const keys = new Set()
+	for (const row of rows) {
+		Object.keys(row).forEach(
+			key =&gt; keys.add(key)
+		)
+	}
+	const header = Array.from(keys)
+	return html.table(
+		{class: "full-width"},
+		html.thead(
+			html.tr(header.map(
+				key =&gt; html.th(key)
+			))
+		),
+		html.tbody (
+			rows.map(row => html.tr(
+				header.map(
+					key => html.td(row[key] ?? empty)
+				)
+			))
+		)
+	)
+}
+return table(
+	{name: "Alice", hobby: "fishing"},
+	{name: "Bob", hobby: "cooking", age: 22}
+)</div>
+				</code>
+			</skooma-showcase>
+		</section>
+
+		<section class="content-width">
+			<h2>Managing state in Skooma</h2>
+			<pre><code lang=js>import {State} from 'skooma/state.js'</code></pre>
+
+			<p>
+				Reactivity and state management in skooma are split between the core module and the <code>state</code> module.
+			</p>
+
+			<h3>Generator Functions</h3>
+			<p>
+				The core <code>skooma.js</code> module understands a state object to be anything that is
+			</p>
+			<ol>
+				<li> Not a DOM node
+				<li> Has a <code>value</code> property
+				<li> Has an <code>addEventListener</code> method
+			</ol>
+			<p>
+				When such an object is passed into a generator function as either a child element or an attribute,
+				skooma will use the <code>value</code> of the state object and register a <code>"change"</code> event
+				that replaces the attribute or child element with the current <code>value</code>.
+			</p>
+			<p>
+				One special case worth mentioning is when an attribute is assigned a state object with a function as its value.
+				In these cases, the function gets registered as an event handler just like if it was assigned directly,
+				but updating the state will remove the event handler and register a new event handler with the current <code>value</code>.
+			</p>
+
+			<h3>The <code>state</code> module</h3>
+			<p>
+				This module primarily exposts the <code>State</code> class,
+				which extends the <code>EventTarget</code> class.
+			</p>
+			<p>
+				Every state object exposes a proxy object via the <code>proxy</code> property.
+				This proxy can be used like any normal object, but setting any property on it will dispatch a <code>"change"</code> event on the corresponding state object.
+				The proxy object itself also has a getter and setter for the <code>value</code> property, which gets forwarded directly to <code>proxy.value</code> for easier access.
+			</p>
+			<p>
+				This means that any <code>State</code> object satisfies the API of a state object from the previous section,
+				meaning they can be used to build reactive components.
+			</p>
+
+			<skooma-showcase code="false">
+				<code>
+<div contenteditable="false">const counter = new State({value: 0})
+
+counter.valueChanged = newValue =&gt;
+	console.log(`Value: ${newValue}`)
+
+return html.flexColumn(
+	{gap: 1},
+	html.button(
+		"Click Me! ",
+		html.span(counter),
+		{ click: () =&gt; {
+			counter.value += 1
+		}}
+	),
+	html.button(
+		"Clear",
+		{ click: () =&gt; {
+			counter.value = 0
+		}}
+	)
+)</div>
+				</code>
+			</skooma-showcase>
+
+			<!-- TODO: Describe constructor options -->
+			<p>
+				The basic <code>State</code> object is backed by a plain JS object, so their attributes are unique and do not persist page reload.<br>
+				By contrast, the <code>StoredState</code> class, which extends the core <code>State</code> class, is backed by a <code>Storage</code> object like
+				<code>window.localStorage</code> or <code>window.sessionStorage</code>, meaning that they persist page reloads.<br>
+				Additionally, they detect changes both from the current as well as from other browser tabs/windows, so any updates of the state
+				get propagated automatically to all states backed by the same storage.
+			</p>
+		</section>
+
+		<section class="content-width">
+
+			<h2>A simple Todo list</h2>
+
+			<p>
+				A simple, but not completely bare-bones todo list application,
+				using nothing more than Skooma and the CSS already present
+				on this page to save some code.
+			</p>
+
+			<skooma-showcase code="false">
+				<code>
+<div contenteditable="false">let todo, input
+const task = value => 
+html.flexRow (
+	{class: ["todo"], gap: 1},
+	value,
+	html.span("[x]", {
+		style: {
+			color: "var(--primary-6)",
+			cursor: "pointer"
+		},
+		click: event =&gt; {
+		event
+			.target
+			.closest(".todo")
+			.remove()
+		}
+	})
+)
+return todo =
+html.flexColumn(
+	{gap: 1},
+	input=html.input({
+		type: "text",
+		placeholder:
+			"Do some stuff",
+	}),
+	html.button("Add Task",
+	{
+		click: event =&gt; {
+			todo.append(task(
+				input.value ||
+				input.placeholder
+			))
+		}
+	})
+)</div>
+				</code>
+			</skooma-showcase>
+		</section>
+	</main>
+
+	<footer class="inset box">
+		<flex-row gap=1>
+			<div>
+				Skooma is great!
+			</div>
+		</flex-row>
+	</footer>
+</html>
