@@ -1,0 +1,504 @@
+<html theme=dark>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+
+	<script type="module" src="https://cdn.jsdelivr.net/gh/darkwiiplayer/components@master/TypeWriter.js"></script>
+
+	<style>
+		@import
+		/* url('https://cdn.jsdelivr.net/gh/darkwiiplayer/css@main/all.css') */
+		url('https://darkwiiplayer.github.io/css/all.css') layer(framework);
+		@import
+		/* url('https://cdn.jsdelivr.net/gh/darkwiiplayer/css@main/schemes/talia.css') */
+		url('https://darkwiiplayer.github.io/css/schemes/talia.css') layer(theme);
+		@import url('styles.css') layer(site);
+
+		.jsdelivr-badge {
+			filter: saturate(.4) hue-rotate(250deg);
+			border-radius: .2em;
+		}
+	</style>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+
+	<script>
+		const scrollHook = () => {
+			document.body.setAttribute("scroll", window.scrollY)
+		}
+		window.addEventListener("scroll", scrollHook)
+		document.addEventListener("readystatechange", scrollHook)
+
+		const observer = new IntersectionObserver(events => {}, {
+			rootMargin: '-1px 0px 0px 0px',
+			threshold: [1]
+		})
+	</script>
+
+	<script type="module">
+		import hljs from 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/es/highlight.min.js';
+		import lang_html from "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/es/languages/xml.min.js"
+
+		hljs.registerLanguage("html", lang_html)
+
+		document.querySelectorAll('code[lang="js"]').forEach(code => {
+			code.innerHTML = hljs.highlight("javascript", code.innerText).value
+		})
+	</script>
+
+	<script type="module">
+		import "./js/SkoomaShowcase.js"
+	</script>
+
+	<a name=top></a>
+
+	<header role="navigation" class="fixed">
+		<nav class="bar">
+			<ul>
+				<li><a href="#top">Top</a></li>
+				<li><a href="#getting-started">Getting Started</a></li>
+				<li><a href="https://github.com/darkwiiplayer/skooma-js">GitHub</a></li>
+				<li><a href="https://www.npmjs.com/package/skooma">npm</a></li>
+			</ul>
+		</nav>
+		<img alt="" class="jsdelivr-badge" src="https://data.jsdelivr.com/v1/package/npm/skooma/badge">
+	</header>
+
+	<page-hero role="banner" cover=60>
+		<!-- <img src="https://picsum.photos/1920/1080"> -->
+		<hgroup>
+			<h1 style="font-size: 6vw">Skooma</span></h1>
+			<code lang="js">import { html } from "skooma/render.js"</code>
+			<p>
+				A new way of building
+				<type-writer loop>
+					<span>HTML</span>
+					<template>SVG</template>
+					<template>templates</template>
+					<template>components</template>
+					<template>applications</template>
+				</type-writer>
+				in vanilla JavaScript
+			</p>
+		</hgroup>
+		<flex-row gap=1>
+			<!--<a class="button" href="#elevator-pitch">Elevator Pitch</a>-->
+			<a class="button" href="#getting-started">Get Started</a>
+		</flex-row>
+	</page-hero>
+
+	<main style="margin-top: 0">
+		<section id="elevator-pitch" class="box">
+			<div class="content-width" style="padding: 2em 0">
+				<h2>Elevator Pitch</h2>
+
+				<p class="big">
+					Skooma combines <em>easy</em> and <em>powerful</em> HTML generation with optional <em>reactivity</em>.<br>
+					All in plain JavaScript.
+				</p>
+
+				<skooma-showcase>
+<code><div contenteditable="false">return html.p(
+	"Text Node",
+	html.br(),
+	html.b("HTML Node"),
+	{style:{color:"salmon"}},
+)</div></code>
+				</skooma-showcase>
+
+				<vertical-spacer></vertical-spacer>
+
+				<p>
+					Skooma is <em>small</em> enough that you can use it even if you only need it in a single function,
+					<em>easy</em> enough to figure out what's going on even if you've never used it,
+					<em>powerful</em> enough that you won't <i>need</i> another framework and
+					<em>flexible</em> enough to let you use one regardless.
+				</p>
+
+				<p class="big">
+					If that sounds good, it's time to back up those claims!
+				</p>
+				<p>
+					Continue reading to get an overview of skooma's features.<br>
+					Or jump down to the <a href="#skooma-explained">explainer</a> for  the hows and whys.
+				</p>
+			</div>
+		</section>
+
+		<section id="getting-started" class="content-width">
+			<h2>Getting Started</h2>
+
+			<section>
+				<p class="big">
+					Trying out skooma is super easy!<br>
+					Just import the <code>html</code> export into your script and start generating DOM nodes.
+				</p>
+
+				<pre><code lang=js>import {html} from "https://cdn.jsdelivr.net/npm/skooma@1.3.1/skooma.min.js"</code></pre>
+			</section>
+
+			<section>
+				<p>
+					Calling any method on this object will generate an HTML node.
+					Passing in arguments is how you add children, set attributes and even do more advanced things.
+				</p>
+
+				<skooma-showcase preview="false">
+					<code>
+						<div contenteditable="false">return html.div()</div>
+					</code>
+				</skooma-showcase>
+
+				<p>
+					Using the <code>component</code> helper from the <code>sckooma/observable.js</code> module
+					makes it easier to see results on your page:
+					Just pass it a function that returns some DOM nodes, and it'll register a custom element for you.
+				</p>
+
+				<pre><code lang=js>import {component} from "https://cdn.jsdelivr.net/npm/skooma@1.3.1/state.min.js"
+const myComponent = () =&gt; html.div("Rendered Component")
+component(myComponent) //Registers it as &lt;my-component&gt;</code></pre>
+
+				<p>
+					Of course, you can also just call <code lang=js>document.body.append(html.span("My Text"))</code> in your script.
+				</p>
+			</section>
+		</section>
+
+		<section class="content-width">
+			<h2>Basic DOM generation</h2>
+
+			<section>
+				<p>
+					Content can be added to a node by simply passing it as arguments to the function.
+					This works for strings, HTML elements, functions and even observable state containers.
+				</p>
+
+				<skooma-showcase preview="false">
+					<code>
+<div contenteditable="false">return html.span(
+	"Skooma ",
+	html.u(
+		"is ",
+		html.b("cool")
+	)
+)</div>
+					</code>
+				</skooma-showcase>
+			</section>
+
+			<section>
+				<p>
+					Adding attributes is just as easy: Just pass an object into the function.
+					If the value is an array, it'll get joined with spaces.
+				</p>
+
+				<skooma-showcase preview="false">
+					<code>
+<div contenteditable="false">return html.span({
+	id: "warning",
+	class: ["danger", "bold"],
+})</div>
+					</code>
+				</skooma-showcase>
+			</section>
+
+			<section>
+				<p>
+					Event listeners work just like attribute, except the value is a function:
+				</p>
+
+				<skooma-showcase code="false">
+					<code>
+<div contenteditable="false">return html.button("Click Me!", {
+	click: event => {
+		alert("Button clicked :3")
+	}
+})</div>
+					</code>
+				</skooma-showcase>
+
+				<section>
+					<p class="big">
+						Some "attributes" are handled in special ways to make things easier:
+					</p>
+
+					<p>
+						<code>style</code> sets the inline styles of the node.
+					</p>
+					<p>
+						<code>camelCase</code> names will be converted to <code>kebab-case</code> and values
+						will be converted to strings.
+					</p>
+
+					<skooma-showcase>
+						<code>
+<div contenteditable="false">return html.div(
+	{ style: {
+		color: "salmon"
+	}},
+	html.span("Big Salmon",
+		{ style: {
+			fontSize: "1.4em"
+		}}
+	)
+)</div>
+						</code>
+					</skooma-showcase>
+
+					<p>
+						<code>dataset</code> converts its key-value pairs into <code>data-</code> attributes.
+					</p>
+
+					<skooma-showcase preview=false>
+						<code>
+<div contenteditable="false">return html.span(
+	{ dataset: {
+		from: "Fire",
+		to: "Heat",
+		snakeCase: "converted"
+	} },
+	"Heat from Fire"
+)</div>
+						</code>
+					</skooma-showcase>
+
+					<p>
+						<code>shadowRoot</code> will attach a shadow DOM to the newly created node.
+					</p>
+
+					<skooma-showcase code=false>
+						<code>
+<div contenteditable="false">return html.div(
+	{ shadowRoot: [
+		html.p("Shadow DOM text"),
+		"Arrays work too :)"
+	]},
+	"Light DOM text"
+)</div>
+						</code>
+					</skooma-showcase>
+				</section>
+			</section>
+		</section>
+
+		<section class="content-width">
+
+			<h2>It's just JavaScript</h2>
+
+			<p>Skooma is entirely implemented as a light-weight JavaScript library.</p>
+
+			<p>
+				What this means is that there's no new syntax for things you already know how to do.
+				Functions like <code>filter</code> or <code>map</code> can be applied directly to your data,
+				nodes can be assigned to variables right as you create them,
+				common structures can be extracted into function and even passed around as arguments,
+				and the syntax is just the boring old javascript that most tools already understand.
+			</p>
+
+			<skooma-showcase code="false">
+				<code>
+<div contenteditable="false">return html.ul(
+	["u", "b", "i"].map(
+		type =&gt; html.li(html[type](
+			`&lt;${type}&gt; element`
+		))
+	)
+)</div>
+				</code>
+			</skooma-showcase>
+		</section>
+
+		<section class="content-width">
+			<h2>State changes in Skooma</h2>
+
+			<pre><code lang=js>import {ObservableObject} from 'skooma/observable.js'</code></pre>
+
+			<p class="big">
+				Skooma offers a series of state management classes it calls "observables".
+				Their purpose is to store one or more values and emit events when they are changed.
+			</p>
+
+			<p>
+				The <code>render.js</code> library handles observables by setting DOM nodes up to
+				get updated when the observable emits a change event. Neihter module depends on the other
+				and they use a common protocol to work together.
+			</p>
+
+			<skooma-showcase code="false">
+				<code>
+<div contenteditable="false">const counter = new State({value: 0})
+
+counter.valueChanged = newValue =&gt;
+	console.log(`Value: ${newValue}`)
+
+return html.buttonGroup(
+	html.button(
+		"Click Me! ",
+		html.span(counter),
+		{
+			click() {
+				counter.value += 1
+			}
+		}
+	),
+	html.button(
+		"Clear", {
+			click() {
+				counter.value = 0
+			}
+		}
+	)
+)</div>
+				</code>
+			</skooma-showcase>
+		</section>
+
+		<section class="content-width">
+
+			<h2>Obligatory Todo list</h2>
+
+			<p>
+				This simple ToDo component uses nothing more than Skooma and
+				the stylesheets already on this page to save some boilerplate.
+			</p>
+
+			<skooma-showcase code="false">
+				<code>
+<div contenteditable="false">const task = value => 
+html.flexRow (
+	{class: "todo", gap: 1},
+	value,
+	html.span("[x]", {
+		style: {
+			color: "var(--primary-6)",
+			cursor: "pointer"
+		},
+		click(event) {
+			event
+				.target
+				.closest(".todo")
+				.remove()
+		}
+	})
+)
+let todo, input
+return todo = html.flexColumn(
+	{gap: 1},
+	input = html.input({
+		type: "text",
+		placeholder:
+			"Do some stuff",
+	}),
+	html.button("Add Task",
+	{
+		click() {
+			todo.append(task(
+				input.value ||
+				input.placeholder
+			))
+		}
+	})
+)</div>
+				</code>
+			</skooma-showcase>
+		</section>
+
+		<section id="skooma-explained" class="content-width">
+			<h2>Skooma Explained</h2>
+
+			<h3>A bit of boring history</h3>
+
+			<p>
+				The <code>skooma/render.js</code> module traces its basic idea back to a Lua module.
+				The basic mechanism is the exact same, as the languages are very similar;
+				with the noteable difference that skooma.lua outputs text and uses a very
+				lightweight DOM-like data-structure as an intermediary representation.
+			</p>
+
+			<p>
+				Porting the library code to JavaScript was an obvious choice, given how similar both
+				languages are in how they handle functions and metaprogramming.
+				The concept worked well to generate HTML to send to the client,
+				so it would work equally well to generate DOM nodes directly in the browser.
+				And the obvious advantages over a server-side implementation is that things like event listeners could be attached directly.
+			</p>
+
+			<p>
+				One design goal while further expanding the capabilities of skooma has been to preserve this original use-case.
+				The library is <i>small enough</i> that pulling it into a project just to generate a few nested DOM structures
+				here and there isn't an unjustifiable waste of application size.
+				This is also why the <code>render</code> module does not depend on the <code>observable</code>
+				module, and has as little code as it can get away with to enable interoperability.
+			</p>
+
+			<p>
+				The later addition of the <code>Obervable</code> module, and the ability of skooma to detect state objects and
+				handle them specially to enable reactivity is what truly enables the library to be used on its own to build
+				simple and even moderately complex interactive components.
+				<br>
+				And with most of this extra complexity existing in a separate file,
+				the size impact on the core skooma library is very minimal, when
+				reactivity is not wanted, or an alternative mechanism for reactivity
+				is preferred.
+			</p>
+
+			<h3>Implementation</h3>
+
+			<p>
+				Skooma is based on a convenient wrapper around <code>document.createElement</code>
+				made even more convenient by a <code>Proxy</code> to generate & populate DOM nodes.
+			</p>
+
+			<h3>Rationale & design principles</h3>
+			
+			<p>
+				The design of skooma is based on the following assumption about web applications:
+			</p>
+			<blockquote>
+				Most web application code can be modeled with simple abstractions.
+				The few cases that can't tend to be too complex for any general-purpose abstraction.
+			</blockquote>
+			<p>
+				Leading to a framework that focuses on the former group,
+				while giving developers the tools to handle the tricky bits without having to hack themselves out of the framework.
+			</p>
+
+			<p>
+				One consideration that sets skooma apart from other alternatives,
+				is the emphasis on being both easy to adopt, integrate, and even abandon.
+			</p>
+			<p>
+				While skooma provides some level of abstraction over native browser APIs, everything done via skooma is
+				still easy to mentally map onto the underlying APIs. This reduces the mental load of translating what the
+				code says, and what is happening to the website, creating a common mental model with vanilla javascript,
+				as well as other non-magic libraries and micro-frameworks.
+			</p>
+			<p>
+				This, in practice, means that adding some code that uses skooma to an existing project, integrating it with
+				other technologies, and even removing it in parts or in whole from a project that has outgrown it, or from performance-critical
+				parts of an application that need even the last drop of performance squeezed out of the browser are all very
+				simple to achieve.
+			</p>
+			<p>
+				Even taking out certain aspects like reactivity, while still using skooma to generate DOM nodes that get manipulated
+				manually in response to complex state-changes is as easy as replacing the state objects with primitive values
+				and writing the custom code to take their place.
+			</p>
+			<p>
+				Where other frameworks suck in their stomach and do their best to fit every use-case you could have,
+				skooma is happy to just step aside and make space for more specialised tools.
+				<!-- skooma: the framework that promotes body-acceptance -->
+			</p>
+		</section>
+	</main>
+
+	<footer class="inset box">
+		<flex-row gap=3>
+			<table>
+				<caption style="padding: 0">Feedback</caption>
+				<tr>
+					<th scope="col">Fediverse</th>
+					<td><a href="https://tech.lgbt/@darkwiiplayer">@darkwiiplayer@tech.lgbt</a></td></tr>
+			</table>
+		</flex-row>
+	</footer>
+</html>
