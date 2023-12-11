@@ -1,13 +1,15 @@
 # Skooma
 
+```js
+import {html} from "skooma.js"
+```
+
 A functional-friendly helper library for procedural DOM generation and
 templating.
 
 ## Overview
 
 ```js
-import {html} from "skooma.js"
-
 document.body.append(html.div(
     html.h1("Hello, World!"),
     html.p("Skooma is cool", {class: "amazing"}),
@@ -78,6 +80,10 @@ text`Hello, ${html.b(user)}!`
 
 ## bind
 
+```js
+import {bind} from 'skooma.js'
+```
+
 This function offers a generic mechanism for binding elements to dynamic state.
 It takes a register function that satisfies the following criteria:
 
@@ -104,6 +110,10 @@ is set on every element that returns the current element. This will keep working
 even after several state changes.
 
 ## handle
+
+```js
+import {handle} from 'skooma.js'
+```
 
 Since it is common for event handlers to call `preventDefault()`, skooma
 provides a helper function called `handle` with the following definition:
