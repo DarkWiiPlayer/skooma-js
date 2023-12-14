@@ -33,15 +33,13 @@ const parseAttribute = (attribute) => {
 
 
 const defined = (value, fallback) => typeof value != "undefined" ? value : fallback
-const getCustom = args => String(
-	args.reduce(
-		(current, argument) => Array.isArray(argument)
-			? defined(getCustom(argument), current)
-			: (argument && typeof argument == "object")
-			? defined(argument.is, current)
-			: current
-		,null
-	)
+const getCustom = args => args.reduce(
+	(current, argument) => Array.isArray(argument)
+		? defined(getCustom(argument), current)
+		: (argument && typeof argument == "object")
+		? defined(argument.is, current)
+		: current
+	,undefined
 )
 
 const parseArgs = (element, before, ...args) => {
@@ -79,11 +77,13 @@ const parseArgs = (element, before, ...args) => {
 const node = (name, args, options) => {
 	let element
 	const custom = getCustom(args)
+	const opts = custom && {is: String(custom)}
+
 	if ("nameFilter" in options) name = options.nameFilter(name)
 	if (options.xmlns)
-		element = document.createElementNS(options.xmlns, name, custom ?? {is: custom})
+		element = document.createElementNS(options.xmlns, name, opts)
 	else
-		element = document.createElement(name, custom ?? {is: custom})
+		element = document.createElement(name, opts)
 	parseArgs(element, null, args)
 	return element
 }
