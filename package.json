@@ -1,6 +1,6 @@
 {
 	"name": "skooma",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"author": "darkwiiplayer",
 	"license": "Unlicense",
 	"main": "skooma.js",
@@ -9,6 +9,7 @@
 		"type": "git",
 		"url": "git+https://github.com/darkwiiplayer/skooma-js"
 	},
+	"homepage": "https://darkwiiplayer.github.io/skooma-js",
 	"keywords": [
 		"skooma",
 		"components",
