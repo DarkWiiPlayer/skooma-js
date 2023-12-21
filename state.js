@@ -85,6 +85,10 @@ export class State extends EventTarget {
 		}
 	}
 
+	forward(property="value") {
+		return new ForwardState(this, property)
+	}
+
 	set(prop, value) {
 		this.#target[prop] = value
 	}
@@ -92,6 +96,32 @@ export class State extends EventTarget {
 	get(prop) {
 		return this.#target[prop]
 	}
+}
+
+export class ForwardState extends EventTarget {
+	#backend
+	#property
+
+	constructor(backend, property) {
+		super()
+		this.#backend = backend
+		this.#property = property
+		const ref = new WeakRef(this)
+		const abortController = new AbortController()
+		backend.addEventListener("change", event => {
+			const state = ref.deref()
+			if (state) {
+				const relevantChanges = event.changes.filter(([name]) => name === property)
+				if (relevantChanges.length > 0)
+					state.dispatchEvent(new ChangeEvent(relevantChanges))
+			} else {
+				abortController.abort()
+			}
+		}, {signal: abortController.signal})
+	}
+
+	get value() { return this.#backend.proxy[this.#property] }
+	set value(value) { this.#backend.proxy[this.#property] = value }
 }
 
 export class StorageChangeEvent extends Event {
