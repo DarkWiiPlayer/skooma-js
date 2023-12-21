@@ -179,7 +179,8 @@ export class StoredState extends State {
 
 	get(prop) {
 		if (prop == "value") prop = this.#valueKey
-		return JSON.parse(this.#storage[prop])
+		const value = this.#storage[prop]
+		return value && JSON.parse(value)
 	}
 }
 
