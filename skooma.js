@@ -31,7 +31,6 @@ const parseAttribute = (attribute) => {
 		return JSON.stringify(attribute)
 }
 
-
 const defined = (value, fallback) => typeof value != "undefined" ? value : fallback
 const getCustom = args => args.reduce(
 	(current, argument) => Array.isArray(argument)
@@ -42,36 +41,113 @@ const getCustom = args => args.reduce(
 	,undefined
 )
 
+const isReactive = object => object
+	&& (typeof object == "object")
+	&& ("addEventListener" in object)
+	&& ("value" in object)
+
+const toChild = arg => {
+	if (typeof arg == "string" || typeof arg == "number") {
+		return document.createTextNode(arg)
+	} else if ("nodeName" in arg) {
+		return arg
+	} else if (isReactive(arg)) {
+		return reactiveChild(arg)
+	}
+}
+
+const reactiveChild = reactive => {
+	const ref = new WeakRef(toChild(reactive.value))
+	reactive.addEventListener("change", () => {
+		const value = ref.deref()
+		if (value)
+			value.replaceWith(reactiveChild(reactive))
+	}, {once: true})
+	return ref.deref()
+}
+
+const specialAttributes = {
+	value: {
+		get: element => element.value,
+		set: (element, value) => {
+			element.setAttribute("value", value)
+			element.value = value
+		},
+		hook: (element, callback) => { element.addEventListener("input", callback) }
+	},
+	style: {
+		set: (element, value) => { insertStyles(element.style, value) }
+	},
+	dataset: {
+		set: (element, value) => {
+			for (const [attribute2, value2] of Object.entries(value)) {
+				element.dataset[attribute2] = parseAttribute(value2)
+			}
+		}
+	},
+	shadowRoot: {
+		set: (element, value) => {
+			parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), null, value)
+		}
+	}
+}
+
+const setAttribute = (element, attribute, value, cleanupSignal) => {
+	const special = specialAttributes[attribute]
+	if (isReactive(value))
+		setReactiveAttribute(element, attribute, value)
+	else if (typeof value === "function")
+		element.addEventListener(attribute.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), value, {signal: cleanupSignal})
+	else if (special) {
+		special.set(element, value)
+	}
+	else if (value === true)
+		{if (!element.hasAttribute(attribute)) element.setAttribute(attribute, '')}
+	else if (value === false)
+		element.removeAttribute(attribute)
+	else {
+		element.setAttribute(attribute, parseAttribute(value))
+	}
+}
+
+const setReactiveAttribute = (element, attribute, reactive, abortController) => {
+	if (abortController) abortController.abort()
+	abortController = new AbortController()
+
+	const ref = new WeakRef(element)
+	setAttribute(element, attribute, reactive.value, abortController.signal)
+
+	reactive.addEventListener("change", () => {
+		const element = ref.deref()
+		if (element)
+			setReactiveAttribute(element, attribute, reactive, abortController)
+	}, {once: true})
+
+	const special = specialAttributes[attribute]
+	if (special?.hook) {
+		special.hook(element, () => {
+			const value = special.get(element, attribute)
+			if (value != reactive.value) reactive.value = value
+		})
+	}
+}
+
 const parseArgs = (element, before, ...args) => {
 	if (element.content) element = element.content
-	for (const arg of args) if (arg !== empty)
-		if (typeof arg == "string" || typeof arg == "number")
-			element.insertBefore(document.createTextNode(arg), before)
+	for (const arg of args) if (arg !== empty) {
+		const child = toChild(arg)
+		if (child)
+			element.insertBefore(child, before)
 		else if (arg === undefined || arg == null)
 			console.warn(`An argument of type ${typeof arg} has been ignored`, element)
 		else if (typeof arg == "function")
 			arg(element)
-		else if ("nodeName" in arg)
-			element.insertBefore(arg, before)
 		else if ("length" in arg)
 			parseArgs(element, before, ...arg)
 		else
 			for (const key in arg)
-				if (key == "style" && typeof(arg[key])=="object")
-					insertStyles(element.style, arg[key])
-				else if (key == "dataset" && typeof(arg[key])=="object")
-					for (const [key2, value] of Object.entries(arg[key]))
-						element.dataset[key2] = parseAttribute(value)
-				else if (key == "shadowRoot")
-					parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), null, arg[key])
-				else if (typeof arg[key] === "function")
-					element.addEventListener(key.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), arg[key])
-				else if (arg[key] === true)
-					{if (!element.hasAttribute(key)) element.setAttribute(key, '')}
-				else if (arg[key] === false)
-					element.removeAttribute(key)
-				else
-					element.setAttribute(key, parseAttribute(arg[key]))
+				setAttribute(element, key, arg[key])
+	}
 }
 
 const node = (name, args, options) => {
@@ -97,25 +173,6 @@ export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([
 export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
 
 // Other utility exports
-
-export const bind = transform => {
-	let element
-	const inject = next => Object.defineProperty(next, 'current', {get: () => element})
-	const update = (...data) => {
-		const next = transform(...data)
-		if (next) {
-			if (typeof next == "string") {
-				element.innerText = next
-				return element
-			} else {
-				if (element) element.replaceWith(next)
-				element = inject(next)
-				return element
-			}
-		}
-	}
-	return update
-}
 
 // Wraps an event handler in a function that calls preventDefault on the event
 export const handle = fn => event => { fn(event); event.preventDefault() }
