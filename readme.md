@@ -10,51 +10,59 @@ templating.
 ## Overview
 
 ```js
+const text = new State({value: "Skooma is cool"})
+setTimeout(() => {text.value = "Skooma is awesome!"}, 1e5)
+
 document.body.append(html.div(
     html.h1("Hello, World!"),
-    html.p("Skooma is cool", {class: "amazing"}),
-    html.button("Show Proof", click: event => { alert("It's true!") })
+    html.p(text, {class: "amazing"}),
+    html.button("Show Proof", {click: event => { alert("It's true!") }})
 ))
 ```
 
 ## Interface / Examples
 
-### HTML generation
+### Basic DOM generation
+
+Accessing the `html` proxy with any string key returns a new node generator
+function:
 
 ```js
-html.div()
-// Creates a <div></div> element
-html.div("hello", "world")
-// <div>helloworld</div>
-html.div(html.span())
-// <div><span></span></div>
-html.div([html.span(), html.span()])
-// <div> <span></span> <span></span> </div>
-html.div({class: "foo"})
-// <div class="foo"></div>
-html.div({class: ["foo", "bar"]})
-// <div class="foo bar"></div>
-html.div({click: 1})
-// <div click="1"></div>
-html.div({click: event => console.log(event.target)})
-// Creates a <div> with an event listener for "click" events
-html.div(player: {username: "KhajiitSlayer3564"})
-// Creates a <div> with the attribute "player" set to a JSON-encoded Object
-html.div("Old content", self => self.innerText = "Hello, World!")
-// Creates a <div> and passes it to a function for further processing
-html.div({foo: true})
-// <div foo></div>
-html.div({foo: "bar"}, {foo: false})
-// <div></div>
-
-// Special keys:
-
-html.div({dataset: {foo: 1, bar: 2}})
-// <div data-foo="1" data-bar="2"></div>
-
-html.div({shadowRoot: html.span("Shadow root content")})
-// Attaches a shadow root with a span
+html.div("Hello, World!")
 ```
+
+Attributes can be set by passing objects to the generator:
+
+```js
+html.div("Big Text", {style: "font-size: 1.4em"})
+```
+
+Complex structures can easily achieved by nesting generator functions:
+
+```js
+html.div(
+    html.p(
+        html.b("Bold Text")
+    )
+)
+```
+
+For convenience, arrays assigned as attributes will be joined with spaces:
+
+```js
+html.a({class: ["button", "important"]})
+```
+
+Assigning a function as an attribute will instead attach it as an event
+listener:
+
+```js
+html.button("Click me!", {click: event => {
+    alert("You clicked the button.")
+}})
+```
+
+<!-- TODO: Document special keys -->
 
 Generators can be called with many arguments. Arrays get iterated recursively as
 if they were part of a flat argument list.
