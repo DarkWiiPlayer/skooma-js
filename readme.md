@@ -78,37 +78,6 @@ text`Hello, ${html.b(user)}!`
 // Text node for Hello, the <b> tag with the user's name, and a text node for !
 ```
 
-## bind
-
-```js
-import {bind} from 'skooma.js'
-```
-
-This function offers a generic mechanism for binding elements to dynamic state.
-It takes a register function that satisfies the following criteria:
-
-- It returns an initial state as an array
-- It accepts a callback function
-- On state change, it calls it with the new state as its arguments
-
-And returns a second function, which takes a transformation (another functuion)
-from input state to DOM node. This transformation will be used to create an
-initial element from the initial state, which will be returned.
-
-On every state change, the transform ation will be called on the new state to
-generate a new DOM Node, which replace the current one.
-
-```js
-bind(register)(html.div)
-// Returns a div element bound to register
-// Assuming register is a higher order function
-// and html.div is a transformation from input state to a <div> node
-```
-
-Since references to the bound element can become stale, a `current` property
-is set on every element that returns the current element. This will keep working
-even after several state changes.
-
 ## handle
 
 ```js
