@@ -1,11 +1,11 @@
 # Skooma
 
+A functional-friendly helper library for procedural DOM generation and
+templating.
+
 ```js
 import {html} from "skooma.js"
 ```
-
-A functional-friendly helper library for procedural DOM generation and
-templating.
 
 ## Overview
 
