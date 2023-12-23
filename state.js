@@ -203,8 +203,11 @@ export class StoredState extends State {
 
 const attributeObserver = new MutationObserver(mutations => {
 	for (const {type, target, attributeName: name} of mutations) {
-		if (type == "attributes")
-			target.state.proxy[name] = target.getAttribute(name)
+		if (type == "attributes") {
+			const next = target.getAttribute(name)
+			if (target.state.proxy[name] !== next)
+				target.state.proxy[name] = next
+		}
 	}
 })
 
@@ -214,6 +217,12 @@ export const component = (generator, name) => {
 		constructor() {
 			super()
 			this.state = new State(Object.fromEntries([...this.attributes].map(attribute => [attribute.name, attribute.value])))
+			this.state.addEventListener("change", event => {
+				for (const [name, value] of event.changes) {
+					if (this.getAttribute(name) !== value)
+						this.setAttribute(name, value)
+				}
+			})
 			attributeObserver.observe(this, {attributes: true})
 			this.replaceChildren(generator(this.state))
 		}
