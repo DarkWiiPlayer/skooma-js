@@ -85,8 +85,8 @@ export class State extends EventTarget {
 		}
 	}
 
-	forward(property="value") {
-		return new ForwardState(this, property)
+	forward(property="value", fallback) {
+		return new ForwardState(this, property, fallback)
 	}
 
 	set(prop, value) {
@@ -101,11 +101,13 @@ export class State extends EventTarget {
 export class ForwardState extends EventTarget {
 	#backend
 	#property
+	#fallback
 
-	constructor(backend, property) {
+	constructor(backend, property, fallback) {
 		super()
 		this.#backend = backend
 		this.#property = property
+		this.#fallback = fallback
 		const ref = new WeakRef(this)
 		const abortController = new AbortController()
 		backend.addEventListener("change", event => {
@@ -120,7 +122,7 @@ export class ForwardState extends EventTarget {
 		}, {signal: abortController.signal})
 	}
 
-	get value() { return this.#backend.proxy[this.#property] }
+	get value() { return this.#backend.proxy[this.#property] ?? this.#fallback }
 	set value(value) { this.#backend.proxy[this.#property] = value }
 }
 
