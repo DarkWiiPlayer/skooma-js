@@ -38,6 +38,7 @@ export class State extends EventTarget {
 	#target
 	#options
 	#queue
+	#forwardCache
 
 	constructor(target={}, options={}) {
 		super()
@@ -86,7 +87,17 @@ export class State extends EventTarget {
 	}
 
 	forward(property="value", fallback) {
-		return new ForwardState(this, property, fallback)
+		if (!this.#forwardCache) this.#forwardCache = new Map()
+		const cached = this.#forwardCache.get(property).deref()
+		if (cached) {
+			return cached
+		} else {
+			const forwarded = new ForwardState(this, property, fallback)
+			ref = new Weakref(forwarded)
+			this.#forwardCache.set(property, ref)
+			forwardFinalizationRegistry.register(forwarded, [this.#forwardCache, property])
+			return forwarded
+		}
 	}
 
 	set(prop, value) {
@@ -97,6 +108,10 @@ export class State extends EventTarget {
 		return this.#target[prop]
 	}
 }
+
+const forwardFinalizationRegistry = new FinalizationRegistry(([cache, name]) => {
+	cache.remove(name)
+})
 
 export class ForwardState extends EventTarget {
 	#backend
@@ -184,6 +199,25 @@ export class StoredState extends State {
 		const value = this.#storage[prop]
 		return value && JSON.parse(value)
 	}
+}
+
+const attributeObserver = new MutationObserver(mutations => {
+	for (const {type, target, attributeName: name} of mutations) {
+		if (type == "attributes")
+			target.state.proxy[name] = target.getAttribute(name)
+	}
+})
+
+export const component = (generator, name) => {
+	name = name ?? generator.name.replace(/([a-z])([A-Z])/g, (_, a, b) => `${a}-${b.toLowerCase()}`)
+	customElements.define(name, class extends HTMLElement{
+		constructor() {
+			super()
+			this.state = new State(Object.fromEntries([...this.attributes].map(attribute => [attribute.name, attribute.value])))
+			attributeObserver.observe(this, {attributes: true})
+			this.replaceChildren(generator(this.state))
+		}
+	})
 }
 
 export default State
