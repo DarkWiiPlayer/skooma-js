@@ -88,12 +88,12 @@ export class State extends EventTarget {
 
 	forward(property="value", fallback) {
 		if (!this.#forwardCache) this.#forwardCache = new Map()
-		const cached = this.#forwardCache.get(property).deref()
+		const cached = this.#forwardCache.get(property)?.deref()
 		if (cached) {
 			return cached
 		} else {
 			const forwarded = new ForwardState(this, property, fallback)
-			ref = new Weakref(forwarded)
+			const ref = new WeakRef(forwarded)
 			this.#forwardCache.set(property, ref)
 			forwardFinalizationRegistry.register(forwarded, [this.#forwardCache, property])
 			return forwarded
