@@ -10,6 +10,14 @@ or
 	html.ul([1, 2, 3, 4, 5].map(x => html.li(x)), {class: "numbers"})
 */
 
+const weakReferences = new WeakMap()
+const untilDeathDoThemPart = (referrer, reference) => {
+	if (!weakReferences.has(referrer)) {
+		weakReferences.set(referrer, new Set())
+	}
+	weakReferences.get(referrer).add(reference)
+}
+
 export const empty = Symbol("Explicit empty argument for Skooma")
 
 const keyToPropName = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
@@ -63,6 +71,7 @@ const reactiveChild = reactive => {
 		if (value)
 			value.replaceWith(reactiveChild(reactive))
 	}, {once: true})
+	untilDeathDoThemPart(ref.deref(), reactive)
 	return ref.deref()
 }
 
@@ -111,6 +120,8 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 }
 
 const setReactiveAttribute = (element, attribute, reactive, abortController) => {
+	untilDeathDoThemPart(element, reactive)
+
 	if (abortController) abortController.abort()
 	abortController = new AbortController()
 
