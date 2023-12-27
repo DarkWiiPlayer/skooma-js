@@ -14,6 +14,8 @@ export class ChangeEvent extends Event {
 	}
 }
 
+class SimpleState extends EventTarget {}
+
 export class MapStorage extends Storage {
 	#map = new Map()
 	key(index) {
@@ -36,20 +38,36 @@ export class MapStorage extends Storage {
 	}
 }
 
-export class State extends EventTarget {
+export class State extends SimpleState {
 	#target
 	#options
 	#queue
 	#forwardCache
+	#abortController
+	#nested = new Map()
+	#weakRef = new WeakRef(this)
+
+	static isState(object) { return SimpleState.prototype.isPrototypeOf(object) }
 
 	constructor(target={}, options={}) {
 		super()
+
+		this.#abortController = new AbortController
+		abortRegistry.register(this, this.#abortController)
+
 		this.#options = options
 		this.#target = target
 		this.proxy = new Proxy(target, {
 			set: (_target, prop, value) => {
-				this.emit(prop, value)
-				this.set(prop, value)
+				const old = this.get(prop)
+				if (old !== value) {
+					this.emit(prop, value)
+					if (this.#options.deep !== false) {
+						if (State.isState(old)) this.disown(prop, old)
+						if (State.isState(value)) this.adopt(prop, value)
+					}
+					this.set(prop, value)
+				}
 				return true
 			},
 			get: (_target, prop) => this.get(prop),
@@ -71,6 +89,29 @@ export class State extends EventTarget {
 	// When you only need one value, you can skip the proxy.
 	set value(value) { this.proxy.value = value }
 	get value() { return this.proxy.value }
+
+	adopt(prop, state) {
+		let handlers = this.#nested.get(state)
+		if (!handlers) {
+			// Actual adoption
+			handlers = new Map()
+			this.#nested.set(state, handlers)
+		}
+		const ref = this.#weakRef
+		const handler = () => ref.deref()?.emit(prop, state)
+
+		handlers.set(prop, handler)
+		state.addEventListener("change", handler, {signal: this.#abortController.signal})
+	}
+	disown(prop, state) {
+		const handlers = this.#nested.get(state)
+		const handler = handlers.get(prop)
+		state.removeEventListener("change", handler)
+		handlers.delete(prop)
+		if (handlers.size == 0) {
+			this.#nested.delete(state)
+		}
+	}
 
 	// Anounces that a prop has changed
 	emit(prop, value) {
@@ -115,7 +156,7 @@ const forwardFinalizationRegistry = new FinalizationRegistry(([cache, name]) => 
 	cache.remove(name)
 })
 
-export class ForwardState extends EventTarget {
+export class ForwardState extends SimpleState {
 	#backend
 	#property
 	#fallback
@@ -235,7 +276,7 @@ export const component = (generator, name) => {
 	return Element;
 }
 
-class ComposedState extends EventTarget {
+class ComposedState extends SimpleState {
 	#func
 	#states
 	#options
