@@ -1,3 +1,5 @@
+export const abortRegistry = new FinalizationRegistry(controller => controller.abort())
+
 export class ChangeEvent extends Event {
 	#final
 	constructor(...changes) {
@@ -215,7 +217,7 @@ const attributeObserver = new MutationObserver(mutations => {
 
 export const component = (generator, name) => {
 	name = name ?? generator.name.replace(/([a-z])([A-Z])/g, (_, a, b) => `${a}-${b.toLowerCase()}`)
-	customElements.define(name, class extends HTMLElement{
+	const Element = class extends HTMLElement{
 		constructor() {
 			super()
 			this.state = new State(Object.fromEntries([...this.attributes].map(attribute => [attribute.name, attribute.value])))
@@ -228,7 +230,58 @@ export const component = (generator, name) => {
 			attributeObserver.observe(this, {attributes: true})
 			this.replaceChildren(generator(this.state))
 		}
-	})
+	}
+	customElements.define(name, Element)
+	return Element;
 }
+
+class ComposedState extends EventTarget {
+	#func
+	#states
+	#options
+
+	constructor(func, options, ...states) {
+		super()
+
+		this.#func = func
+		this.#states = states
+		this.#options = options
+
+		const abortController = new AbortController()
+		abortRegistry.register(this, abortController)
+		const ref = new WeakRef(this)
+
+		states.forEach(state => {
+			state.addEventListener("change", event => {
+				const value = event.final.get("value")
+				if (value) ref.deref()?.scheduleUpdate()
+			}, {signal: abortController.signal})
+		})
+
+		this.update()
+	}
+
+	#microtaskQueued
+	scheduleUpdate() {
+		if (this.#options.defer) {
+			if (!this.#microtaskQueued) {
+				queueMicrotask(() => {
+					this.#microtaskQueued = false
+					this.update()
+				})
+			}
+			this.#microtaskQueued = true
+		} else {
+			this.update()
+		}
+	}
+
+	update() {
+		this.value = this.#func(...this.#states.map(state => state.value))
+		this.dispatchEvent(new ChangeEvent([["value", this.value]]))
+	}
+}
+
+export const compose = func => (...states) => new ComposedState(func, {defer: true}, ...states)
 
 export default State
