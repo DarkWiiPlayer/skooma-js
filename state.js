@@ -207,7 +207,7 @@ const attributeObserver = new MutationObserver(mutations => {
 	for (const {type, target, attributeName: name} of mutations) {
 		if (type == "attributes") {
 			const next = target.getAttribute(name)
-			if (target.state.proxy[name] !== next)
+			if (String(target.state.proxy[name]) !== next)
 				target.state.proxy[name] = next
 		}
 	}
@@ -221,7 +221,7 @@ export const component = (generator, name) => {
 			this.state = new State(Object.fromEntries([...this.attributes].map(attribute => [attribute.name, attribute.value])))
 			this.state.addEventListener("change", event => {
 				for (const [name, value] of event.changes) {
-					if (this.getAttribute(name) !== value)
+					if (this.getAttribute(name) !== String(value))
 						this.setAttribute(name, value)
 				}
 			})
