@@ -128,9 +128,11 @@ export class ForwardState extends EventTarget {
 		backend.addEventListener("change", event => {
 			const state = ref.deref()
 			if (state) {
-				const relevantChanges = event.changes.filter(([name]) => name === property)
+				const relevantChanges = event.changes
+					.filter(([name]) => name === property)
+					.map(([_, value]) => ["value", value])
 				if (relevantChanges.length > 0)
-					state.dispatchEvent(new ChangeEvent(relevantChanges))
+					state.dispatchEvent(new ChangeEvent(...relevantChanges))
 			} else {
 				abortController.abort()
 			}
