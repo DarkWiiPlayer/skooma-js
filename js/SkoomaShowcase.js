@@ -79,6 +79,7 @@ element(class SkoomaShowcase extends HTMLElement {
 		this.shadowRoot.replaceChildren(
 			html.slot(),
 			html.span("🖉", {
+				role: "checkbox",
 				class: "edit",
 				click: ({target: button}) => {
 					this.querySelectorAll("[contenteditable]")
