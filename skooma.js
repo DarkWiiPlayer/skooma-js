@@ -49,6 +49,8 @@ const getCustom = args => args.reduce(
 	,undefined
 )
 
+const isElement = object => HTMLElement.prototype.isPrototypeOf(object)
+
 const isReactive = object => object
 	&& (typeof object == "object")
 	&& ("addEventListener" in object)
@@ -57,7 +59,7 @@ const isReactive = object => object
 const toChild = arg => {
 	if (typeof arg == "string" || typeof arg == "number") {
 		return document.createTextNode(arg)
-	} else if ("nodeName" in arg) {
+	} else if (isElement(arg)) {
 		return arg
 	} else if (isReactive(arg)) {
 		return reactiveChild(arg)
