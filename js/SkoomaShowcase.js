@@ -40,7 +40,7 @@ html-preview {
 	z-index: 10;
 	position: absolute;
 	display: block;
-	content: '🖉';
+	content: '✎';
 	line-height: 100%;
 	opacity: .2;
 	font-size: 2em;
