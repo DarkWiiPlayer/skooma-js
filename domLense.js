@@ -25,7 +25,10 @@ const lense = (methods, extra) => {
 				if (child) {
 					methods.set(child, value)
 					return true
-				} else if(prop == target.children.length) {
+				} else {
+					for (let i = target.children.length; i < Number(prop); i++) {
+						target.appendChild(methods.new(undefined))
+					}
 					const element = methods.new(value)
 					target.appendChild(element)
 					if (methods.get(element) !== value)
