@@ -254,7 +254,6 @@ const attributeObserver = new MutationObserver(mutations => {
 		if (type == "attributes") {
 			const next = target.getAttribute(name)
 			const camelName = kebabToCamel(name)
-			console.log(camelName)
 			if (String(target.state.proxy[camelName]) !== next)
 				target.state.proxy[camelName] = next
 		}
@@ -330,5 +329,63 @@ class ComposedState extends SimpleState {
 }
 
 export const compose = func => (...states) => new ComposedState(func, {defer: true}, ...states)
+
+const eventName = "mutation"
+
+class MutationEvent extends Event {
+	constructor() {
+		super(eventName, {bubbles: true})
+	}
+}
+
+const mutationObserver = new MutationObserver(mutations => {
+	for (const mutation of mutations) {
+		mutation.target.dispatchEvent(new MutationEvent())
+	}
+})
+
+export class DOMState extends SimpleState {
+	#old
+	#options
+	#changedValue = false
+
+	constructor(target, value, options) {
+		super()
+		this.#options = options
+		this.#old = [...value]
+		this.value = value
+		const controller = new AbortController()
+		mutationObserver.observe(target, {
+			attributes: true,
+			childList: true,
+			characterData: true,
+			subtree: true,
+		})
+		target.addEventListener(eventName, event=>{this.update(event)}, {signal: controller.signal})
+		abortRegistry.register(this, controller)
+	}
+
+	update() {
+		const current = [...this.value]
+		if (current.length === this.#old.length) {
+			for (const idx in current) {
+				if (current[idx] !== this.#old[idx]) break
+			}
+			return
+		}
+		this.#old = current
+		if (this.#options?.defer) {
+			if (!this.#changedValue) {
+				queueMicrotask(() => {
+					this.#changedValue = false
+					this.dispatchEvent(new ChangeEvent(["value", this.#changedValue]))
+				})
+				this.#changedValue = current
+			}
+		} else {
+			this.dispatchEvent(new ChangeEvent(["value", current]))
+		}
+	}
+}
 
 export default State
