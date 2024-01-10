@@ -348,12 +348,13 @@ export class DOMState extends SimpleState {
 	#old
 	#options
 	#changedValue = false
+	#value
 
 	constructor(target, value, options) {
 		super()
 		this.#options = options
 		this.#old = [...value]
-		this.value = value
+		this.#value = value
 		const controller = new AbortController()
 		mutationObserver.observe(target, {
 			attributes: true,
@@ -365,8 +366,10 @@ export class DOMState extends SimpleState {
 		abortRegistry.register(this, controller)
 	}
 
+	get value() { return this.#old }
+
 	update() {
-		const current = [...this.value]
+		const current = [...this.#value]
 		if (current.length === this.#old.length) {
 			for (const idx in current) {
 				if (current[idx] !== this.#old[idx]) break
