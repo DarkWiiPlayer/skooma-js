@@ -1,5 +1,8 @@
 export const abortRegistry = new FinalizationRegistry(controller => controller.abort())
 
+const camelToKebab = string => string.replace(/([a-z])([A-Z])/g, (_, a, b) => `${a}-${b.toLowerCase()}`)
+const kebabToCamel = string => string.replace(/([a-z])-([a-z])/g, (_, a, b) => a+b.toUpperCase())
+
 export class ChangeEvent extends Event {
 	#final
 	constructor(...changes) {
@@ -250,22 +253,25 @@ const attributeObserver = new MutationObserver(mutations => {
 	for (const {type, target, attributeName: name} of mutations) {
 		if (type == "attributes") {
 			const next = target.getAttribute(name)
-			if (String(target.state.proxy[name]) !== next)
-				target.state.proxy[name] = next
+			const camelName = kebabToCamel(name)
+			console.log(camelName)
+			if (String(target.state.proxy[camelName]) !== next)
+				target.state.proxy[camelName] = next
 		}
 	}
 })
 
 export const component = (generator, name) => {
-	name = name ?? generator.name.replace(/([a-z])([A-Z])/g, (_, a, b) => `${a}-${b.toLowerCase()}`)
+	name = name ?? camelToKebab(generator.name)
 	const Element = class extends HTMLElement{
 		constructor() {
 			super()
-			this.state = new State(Object.fromEntries([...this.attributes].map(attribute => [attribute.name, attribute.value])))
+			this.state = new State(Object.fromEntries([...this.attributes].map(attribute => [kebabToCamel(attribute.name), attribute.value])))
 			this.state.addEventListener("change", event => {
 				for (const [name, value] of event.changes) {
-					if (this.getAttribute(name) !== String(value))
-						this.setAttribute(name, value)
+					const kebabName = camelToKebab(name)
+					if (this.getAttribute(kebabName) !== String(value))
+						this.setAttribute(kebabName, value)
 				}
 			})
 			attributeObserver.observe(this, {attributes: true})
