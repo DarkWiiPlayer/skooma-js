@@ -269,7 +269,7 @@ export const component = (generator, name) => {
 				}
 			})
 			attributeObserver.observe(this, {attributes: true})
-			this.replaceChildren(generator(this.state))
+			this.replaceChildren(generator(this.state, this))
 		}
 	}
 	customElements.define(name, Element)
