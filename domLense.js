@@ -14,7 +14,7 @@ class ChildObserver extends MutationObserver {
 
 const childObserver = new ChildObserver()
 
-const lense = (methods, extra) => {
+export const lense = (methods, extra) => {
 	if (extra) return lense(extra)(methods)
 
 	const traps = {
