@@ -1,4 +1,4 @@
-export const abortRegistry = new FinalizationRegistry(controller => controller.abort())
+const abortRegistry = new FinalizationRegistry(controller => controller.abort())
 
 const camelToKebab = string => string.replace(/([a-z])([A-Z])/g, (_, a, b) => `${a}-${b.toLowerCase()}`)
 const kebabToCamel = string => string.replace(/([a-z])-([a-z])/g, (_, a, b) => a+b.toUpperCase())
@@ -17,7 +17,7 @@ export class ChangeEvent extends Event {
 	}
 }
 
-class SimpleState extends EventTarget {}
+export class SimpleState extends EventTarget {}
 
 export class MapStorage extends Storage {
 	#map = new Map()
@@ -189,7 +189,7 @@ export class ForwardState extends SimpleState {
 	set value(value) { this.#backend.proxy[this.#property] = value }
 }
 
-export class StorageChangeEvent extends Event {
+class StorageChangeEvent extends Event {
 	constructor(storage, key, value, targetState) {
 		super("storagechange")
 		this.storageArea = storage
