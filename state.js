@@ -345,39 +345,45 @@ const mutationObserver = new MutationObserver(mutations => {
 })
 
 export class DOMState extends SimpleState {
-	#old
-	#options
-	#changedValue = false
-	#value
+	#target
+	#defer
+	#getValue
+	#equal
 
-	constructor(target, value, options) {
+	#old
+	#changedValue = false
+
+	constructor(target, options) {
 		super()
-		this.#options = options
-		this.#old = [...value]
-		this.#value = value
+		this.#defer = options.defer ?? false
+		this.#target = target
+		this.#getValue = options.get ?? (target => target.value)
+		this.#equal = options.equal ?? ((a, b) => a===b)
+
+		this.#old = this.#getValue(target)
+
 		const controller = new AbortController()
+		target.addEventListener(eventName, event=>{this.update(event)}, {signal: controller.signal})
+
+		abortRegistry.register(this, controller)
 		mutationObserver.observe(target, {
 			attributes: true,
 			childList: true,
 			characterData: true,
 			subtree: true,
 		})
-		target.addEventListener(eventName, event=>{this.update(event)}, {signal: controller.signal})
-		abortRegistry.register(this, controller)
 	}
 
 	get value() { return this.#old }
 
 	update() {
-		const current = [...this.#value]
-		if (current.length === this.#old.length) {
-			for (const idx in current) {
-				if (current[idx] !== this.#old[idx]) break
-			}
-			return
-		}
+		const current = this.#getValue(this.#target)
+
+		if (this.#equal(this.#old, current)) return
+
 		this.#old = current
-		if (this.#options?.defer) {
+
+		if (this.#defer) {
 			if (!this.#changedValue) {
 				queueMicrotask(() => {
 					this.#changedValue = false
