@@ -10,6 +10,7 @@ or
 	html.ul([1, 2, 3, 4, 5].map(x => html.li(x)), {class: "numbers"})
 */
 
+// Keep a referee alive until a referrer is collected
 const weakReferences = new WeakMap()
 const untilDeathDoThemPart = (referrer, reference) => {
 	if (!weakReferences.has(referrer)) {
@@ -189,7 +190,7 @@ export default html
 // Other utility exports
 
 // Wraps an event handler in a function that calls preventDefault on the event
-export const handle = fn => event => { fn(event); event.preventDefault() }
+export const handle = fn => event => { event.preventDefault(); return fn(event) }
 
 // Wraps a list of elements in a document fragment
 export const fragment = (...elements) => {
