@@ -160,6 +160,17 @@ export class State extends SimpleState {
 		return this.#target[prop]
 	}
 
+	subscribe(prop, callback) {
+		if (!callback) return this.subscribe("value", prop)
+
+		const controller = new AbortController()
+		this.addEventListener("change", ({final}) => {
+			if (final.has(prop)) return callback(final.get(prop))
+		}, {signal: controller.signal})
+		callback(this.value)
+		return () => controller.abort()
+	}
+
 	// Backwards compatibility
 	get proxy() { return this.values }
 }
