@@ -65,7 +65,7 @@ export class State extends SimpleState {
 				const old = this.get(prop)
 				if (old !== value) {
 					this.emit(prop, value)
-					if (this.#options.deep !== false) {
+					if (this.#options.shallow) {
 						if (State.isState(old)) this.disown(prop, old)
 						if (State.isState(value)) this.adopt(prop, value)
 					}
