@@ -5,82 +5,56 @@ const kebabToCamel = string => string.replace(/([a-z])-([a-z])/g, (_, a, b) => a
 
 export class ChangeEvent extends Event {
 	#final
+	#values
 	constructor(...changes) {
 		super('change')
 		this.changes = changes
 	}
+
+	get values() {
+		if (!this.#values) {
+			const values = new Map()
+			for (const {property, from, to} of this.changes) {
+				let list = values.get(property)
+				if (!list) {
+					list = [from]
+					values.set(property, list)
+				}
+				list.push(to)
+			}
+			this.#values = values
+		}
+		return this.#values
+	}
+
 	get final() {
 		if (!this.#final) {
-			this.#final = new Map(this.changes)
+			this.#final = new Map()
+			for (const [property, list] of this.values) {
+				if (list[0] !== list[list.length-1]) {
+					this.#final.set(property, list[list.length-1])
+				}
+			}
 		}
 		return this.#final
 	}
 }
 
-export class SimpleState extends EventTarget {}
-
-export class MapStorage extends Storage {
-	#map = new Map()
-	key(index) {
-		return [...this.#map.keys()][index]
-	}
-	getItem(keyName) {
-		if (this.#map.has(keyName))
-			return this.#map.get(keyName)
-		else
-			return null
-	}
-	setItem(keyName, keyValue) {
-		this.#map.set(keyName, String(keyValue))
-	}
-	removeItem(keyName) {
-		this.#map.delete(keyName)
-	}
-	clear() {
-		this.#map.clear()
-	}
-}
-
-export class State extends SimpleState {
-	#target
-	#options
+export class SimpleState extends EventTarget {
+	#synchronous
 	#queue
-	#forwardCache
-	#abortController
 	#nested = new Map()
 	#weakRef = new WeakRef(this)
+	#abortController = new AbortController
 
-	static isState(object) { return SimpleState.prototype.isPrototypeOf(object) }
-
-	constructor(target={}, options={}) {
+	constructor({synchronous, methods}={}) {
 		super()
-
-		this.#abortController = new AbortController
+		this.#synchronous = !!synchronous
 		abortRegistry.register(this, this.#abortController)
-
-		this.#options = options
-		this.#target = target
-		this.values = new Proxy(target, {
-			set: (_target, prop, value) => {
-				const old = this.get(prop)
-				if (old !== value) {
-					this.emit(prop, value)
-					if (this.#options.shallow) {
-						if (State.isState(old)) this.disown(prop, old)
-						if (State.isState(value)) this.adopt(prop, value)
-					}
-					this.set(prop, value)
-				}
-				return true
-			},
-			get: (_target, prop) => this.get(prop),
-		})
-
-		this.addEventListener
 
 		// Try running a "<name>Changed" method for every changed property
 		// Can be disabled to maybe squeeze out some performance
-		if (options.methods ?? true) {
+		if (methods ?? true) {
 			this.addEventListener("change", ({final}) => {
 				final.forEach((value, prop) => {
 					if (`${prop}Changed` in this) this[`${prop}Changed`](value)
@@ -89,9 +63,32 @@ export class State extends SimpleState {
 		}
 	}
 
-	// When you only need one value, you can skip the proxy.
-	set value(value) { this.values.value = value }
-	get value() { return this.values.value }
+	subscribe(prop, callback) {
+		if (!callback) return this.subscribe("value", prop)
+
+		const controller = new AbortController()
+		this.addEventListener("change", ({final}) => {
+			if (final.has(prop)) return callback(final.get(prop))
+		}, {signal: controller.signal})
+		callback(this.value)
+		return () => controller.abort()
+	}
+
+	emit(property, from, to, options={}) {
+		const change = {property, from, to, ...options}
+		if (!this.synchronous) {
+			if (!this.#queue) {
+				this.#queue = []
+				queueMicrotask(() => {
+					this.dispatchEvent(new ChangeEvent(...this.#queue))
+					this.#queue = undefined
+				})
+			}
+			this.#queue.push(change)
+		} else {
+			this.dispatchEvent(new ChangeEvent([change]))
+		}
+	}
 
 	adopt(prop, state) {
 		let handlers = this.#nested.get(state)
@@ -101,11 +98,12 @@ export class State extends SimpleState {
 			this.#nested.set(state, handlers)
 		}
 		const ref = this.#weakRef
-		const handler = () => ref.deref()?.emit(prop, state)
+		const handler = () => ref.deref()?.emit(prop, state, state, {state: true})
 
 		handlers.set(prop, handler)
-		state.addEventListener("change", handler, {signal: this.#abortController.signal})
+		state.addEventListener("change", handler, {signal: this.ignal})
 	}
+
 	disown(prop, state) {
 		const handlers = this.#nested.get(state)
 		const handler = handlers.get(prop)
@@ -116,29 +114,49 @@ export class State extends SimpleState {
 		}
 	}
 
-	// Anounces that a prop has changed
-	emit(prop, value) {
-		if (this.#options.defer ?? true) {
-			if (!this.#queue) {
-				this.#queue = []
-				queueMicrotask(() => {
-					this.dispatchEvent(new ChangeEvent(...this.#queue))
-					this.#queue = undefined
-				})
-			}
-			this.#queue.push([prop, value])
-		} else {
-			this.dispatchEvent(new ChangeEvent([prop, value]))
-		}
+	get signal() { return this.#abortController.signal }
+	get synchronous() { return this.#synchronous }
+}
+
+export class State extends SimpleState {
+	#target
+	#shallow
+	#forwardCache
+
+	static isState(object) { return SimpleState.prototype.isPrototypeOf(object) }
+
+	constructor(target={}, {shallow, ...options}={}) {
+		super(options)
+
+		this.#shallow = !!shallow
+		this.#target = target
+		this.values = new Proxy(target, {
+			set: (_target, prop, value) => {
+				const old = this.get(prop)
+				if (old !== value) {
+					this.emit(prop, old, value)
+					if (this.#shallow) {
+						if (State.isState(old)) this.disown(prop, old)
+						if (State.isState(value)) this.adopt(prop, value)
+					}
+					this.set(prop, value)
+				}
+				return true
+			},
+			get: (_target, prop) => this.get(prop),
+		})
 	}
 
-	forward(property="value", fallback) {
+	set value(value) { this.values.value = value }
+	get value() { return this.values.value }
+
+	forward(property="value") {
 		if (!this.#forwardCache) this.#forwardCache = new Map()
 		const cached = this.#forwardCache.get(property)?.deref()
 		if (cached) {
 			return cached
 		} else {
-			const forwarded = new ForwardState(this, property, fallback)
+			const forwarded = new ForwardState(this, property)
 			const ref = new WeakRef(forwarded)
 			this.#forwardCache.set(property, ref)
 			forwardFinalizationRegistry.register(forwarded, [this.#forwardCache, property])
@@ -159,20 +177,6 @@ export class State extends SimpleState {
 		const prop = args[0]
 		return this.#target[prop]
 	}
-
-	subscribe(prop, callback) {
-		if (!callback) return this.subscribe("value", prop)
-
-		const controller = new AbortController()
-		this.addEventListener("change", ({final}) => {
-			if (final.has(prop)) return callback(final.get(prop))
-		}, {signal: controller.signal})
-		callback(this.value)
-		return () => controller.abort()
-	}
-
-	// Backwards compatibility
-	get proxy() { return this.values }
 }
 
 const forwardFinalizationRegistry = new FinalizationRegistry(([cache, name]) => {
@@ -182,21 +186,19 @@ const forwardFinalizationRegistry = new FinalizationRegistry(([cache, name]) => 
 export class ForwardState extends SimpleState {
 	#backend
 	#property
-	#fallback
 
-	constructor(backend, property, fallback) {
+	constructor(backend, property) {
 		super()
 		this.#backend = backend
 		this.#property = property
-		this.#fallback = fallback
 		const ref = new WeakRef(this)
 		const abortController = new AbortController()
 		backend.addEventListener("change", event => {
 			const state = ref.deref()
 			if (state) {
 				const relevantChanges = event.changes
-					.filter(([name]) => name === property)
-					.map(([_, value]) => ["value", value])
+					.filter(({property: name}) => name === property)
+					.map(({from, to}) => ({property: "value", from, to}))
 				if (relevantChanges.length > 0)
 					state.dispatchEvent(new ChangeEvent(...relevantChanges))
 			} else {
@@ -205,7 +207,7 @@ export class ForwardState extends SimpleState {
 		}, {signal: abortController.signal})
 	}
 
-	get value() { return this.#backend.values[this.#property] ?? this.#fallback }
+	get value() { return this.#backend.values[this.#property]}
 	set value(value) { this.#backend.values[this.#property] = value }
 }
 
@@ -280,8 +282,8 @@ export const component = (generator, name) => {
 			super()
 			this.state = new State(Object.fromEntries([...this.attributes].map(attribute => [kebabToCamel(attribute.name), attribute.value])))
 			this.state.addEventListener("change", event => {
-				for (const [name, value] of event.changes) {
-					const kebabName = camelToKebab(name)
+				for (const {property, to: value} of event.changes) {
+					const kebabName = camelToKebab(property)
 					if (this.getAttribute(kebabName) !== String(value))
 						this.setAttribute(kebabName, value)
 				}
@@ -297,14 +299,12 @@ export const component = (generator, name) => {
 class ComposedState extends SimpleState {
 	#func
 	#states
-	#options
 
 	constructor(func, options, ...states) {
-		super()
+		super(options)
 
 		this.#func = func
 		this.#states = states
-		this.#options = options
 
 		const abortController = new AbortController()
 		abortRegistry.register(this, abortController)
@@ -322,7 +322,7 @@ class ComposedState extends SimpleState {
 
 	#microtaskQueued
 	scheduleUpdate() {
-		if (this.#options.defer) {
+		if (this.defer) {
 			if (!this.#microtaskQueued) {
 				queueMicrotask(() => {
 					this.#microtaskQueued = false
@@ -336,8 +336,10 @@ class ComposedState extends SimpleState {
 	}
 
 	update() {
-		this.value = this.#func(...this.#states.map(state => state.value))
-		this.dispatchEvent(new ChangeEvent([["value", this.value]]))
+		const value = this.#func(...this.#states.map(state => state.value))
+		const change = {property: "value", from: this.value, to: value}
+		this.value = value
+		this.dispatchEvent(new ChangeEvent([change]))
 	}
 }
 
@@ -359,7 +361,6 @@ const mutationObserver = new MutationObserver(mutations => {
 
 export class DOMState extends SimpleState {
 	#target
-	#defer
 	#getValue
 	#equal
 
@@ -367,8 +368,7 @@ export class DOMState extends SimpleState {
 	#changedValue = false
 
 	constructor(target, options) {
-		super()
-		this.#defer = options.defer ?? false
+		super(options)
 		this.#target = target
 		this.#getValue = options.get ?? (target => target.value)
 		this.#equal = options.equal ?? ((a, b) => a===b)
@@ -396,7 +396,7 @@ export class DOMState extends SimpleState {
 
 		this.#old = current
 
-		if (this.#defer) {
+		if (this.defer) {
 			if (!this.#changedValue) {
 				queueMicrotask(() => {
 					this.#changedValue = false
@@ -407,6 +407,28 @@ export class DOMState extends SimpleState {
 		} else {
 			this.dispatchEvent(new ChangeEvent(["value", current]))
 		}
+	}
+}
+
+export class MapStorage extends Storage {
+	#map = new Map()
+	key(index) {
+		return [...this.#map.keys()][index]
+	}
+	getItem(keyName) {
+		if (this.#map.has(keyName))
+			return this.#map.get(keyName)
+		else
+			return null
+	}
+	setItem(keyName, keyValue) {
+		this.#map.set(keyName, String(keyValue))
+	}
+	removeItem(keyName) {
+		this.#map.delete(keyName)
+	}
+	clear() {
+		this.#map.clear()
 	}
 }
 

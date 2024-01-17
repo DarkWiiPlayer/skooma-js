@@ -53,9 +53,8 @@ const getCustom = args => args.reduce(
 const isElement = object => HTMLElement.prototype.isPrototypeOf(object)
 
 const isReactive = object => object
-	&& (typeof object == "object")
-	&& ("addEventListener" in object)
-	&& ("value" in object)
+	&& (object instanceof EventTarget)
+	&& ("subscribe" in object)
 
 const toChild = arg => {
 	if (typeof arg == "string" || typeof arg == "number") {
