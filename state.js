@@ -60,7 +60,7 @@ export class State extends SimpleState {
 
 		this.#options = options
 		this.#target = target
-		this.proxy = new Proxy(target, {
+		this.values = new Proxy(target, {
 			set: (_target, prop, value) => {
 				const old = this.get(prop)
 				if (old !== value) {
@@ -90,8 +90,8 @@ export class State extends SimpleState {
 	}
 
 	// When you only need one value, you can skip the proxy.
-	set value(value) { this.proxy.value = value }
-	get value() { return this.proxy.value }
+	set value(value) { this.values.value = value }
+	get value() { return this.values.value }
 
 	adopt(prop, state) {
 		let handlers = this.#nested.get(state)
@@ -185,8 +185,8 @@ export class ForwardState extends SimpleState {
 		}, {signal: abortController.signal})
 	}
 
-	get value() { return this.#backend.proxy[this.#property] ?? this.#fallback }
-	set value(value) { this.#backend.proxy[this.#property] = value }
+	get value() { return this.#backend.values[this.#property] ?? this.#fallback }
+	set value(value) { this.#backend.values[this.#property] = value }
 }
 
 class StorageChangeEvent extends Event {
@@ -254,8 +254,8 @@ const attributeObserver = new MutationObserver(mutations => {
 		if (type == "attributes") {
 			const next = target.getAttribute(name)
 			const camelName = kebabToCamel(name)
-			if (String(target.state.proxy[camelName]) !== next)
-				target.state.proxy[camelName] = next
+			if (String(target.state.values[camelName]) !== next)
+				target.state.values[camelName] = next
 		}
 	}
 })
