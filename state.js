@@ -146,13 +146,22 @@ export class State extends SimpleState {
 		}
 	}
 
-	set(prop, value) {
+	set(...args) {
+		if (args.length === 1) return this.set("value", ...args)
+
+		const [prop, value] = args
 		this.#target[prop] = value
 	}
 
-	get(prop) {
+	get(...args) {
+		if (args.length === 0) return this.get("value")
+
+		const prop = args[0]
 		return this.#target[prop]
 	}
+
+	// Backwards compatibility
+	get proxy() { return this.values }
 }
 
 const forwardFinalizationRegistry = new FinalizationRegistry(([cache, name]) => {
