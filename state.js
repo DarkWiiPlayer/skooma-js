@@ -221,16 +221,13 @@ class StorageChangeEvent extends Event {
 
 export class StoredState extends State {
 	#storage
-	#valueKey
 
 	constructor(init, options={}) {
 		super({}, options)
 		this.#storage = options.storage ?? localStorage ?? new MapStorage()
-		this.#valueKey = options.key ?? 'value'
 
 		// Initialise storage from defaults
-		for (let [prop, value] of Object.entries(init)) {
-			if (prop === 'value') prop = this.#valueKey
+		for (const [prop, value] of Object.entries(init)) {
 			if (this.#storage[prop] === undefined)
 				this.set(prop, value)
 		}
@@ -246,9 +243,7 @@ export class StoredState extends State {
 		// Listen for changes from other windows
 		const handler = event => {
 			if (event.targetState !== this && event.storageArea == this.#storage) {
-				let prop = event.key
-				if (prop === this.#valueKey) prop = 'value'
-				this.emit(prop, JSON.parse(event.newValue))
+				this.emit(event.key, JSON.parse(event.newValue))
 			}
 		}
 		addEventListener("storage", handler)
@@ -256,14 +251,12 @@ export class StoredState extends State {
 	}
 
 	set(prop, value) {
-		if (prop == "value") prop = this.#valueKey
 		const json = JSON.stringify(value)
 		dispatchEvent(new StorageChangeEvent(this.#storage, prop, json, this))
 		this.#storage[prop] = json
 	}
 
 	get(prop) {
-		if (prop == "value") prop = this.#valueKey
 		const value = this.#storage[prop]
 		return value && JSON.parse(value)
 	}
