@@ -24,12 +24,12 @@ export const lense = (methods, extra) => {
 			} else if (prop === Symbol.iterator) {
 				return function*() {
 					for (const child of target.children) {
-						yield methods.get(child)
+						yield methods.get.call(child)
 					}
 				}
 			} else if (prop.match?.call(prop, /^[0-9]+$/)) {
 				const child = target.children[prop]
-				if (child) return methods.get(child)
+				if (child) return methods.get.call(child)
 				return child
 			} else {
 				return Array.prototype[prop]
@@ -39,7 +39,7 @@ export const lense = (methods, extra) => {
 			if (prop.match?.call(prop, /^[0-9]+$/)) {
 				const child = target.children[prop]
 				if (child) {
-					methods.set(child, value)
+					methods.set.call(child, value)
 					return true
 				} else {
 					for (let i = target.children.length; i < Number(prop); i++) {
@@ -47,8 +47,8 @@ export const lense = (methods, extra) => {
 					}
 					const element = methods.new(value)
 					target.appendChild(element)
-					if (methods.get(element) !== value)
-						methods.set(element, value)
+					if (methods.get.call(element) !== value)
+						methods.set.call(element, value)
 					return true
 				}
 			} else if (prop == "length") {
@@ -70,16 +70,7 @@ export const lense = (methods, extra) => {
 		}
 	}
 
-	return element => {
-		const proxy = new Proxy(element, traps)
-
-		if (methods.event) childObserver.observe(element)
-		if (typeof methods.event === "function") element.addEventListener("change", event => {
-			methods.event(proxy, element, event.detail)
-		})
-
-		return proxy
-	}
+	return element => new Proxy(element, traps)
 }
 
 export default lense
