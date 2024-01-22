@@ -98,7 +98,7 @@ const specialAttributes = {
 	},
 	shadowRoot: {
 		set: (element, value) => {
-			parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), null, value)
+			parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), value)
 		}
 	}
 }
@@ -145,18 +145,20 @@ const setReactiveAttribute = (element, attribute, reactive, abortController) => 
 	}
 }
 
-const parseArgs = (element, before, ...args) => {
+const parseArgs = (element, ...args) => {
 	if (element.content) element = element.content
 	for (const arg of args) if (arg !== empty) {
 		const child = toChild(arg)
 		if (child)
-			element.insertBefore(child, before)
+			element.append(child)
 		else if (arg === undefined || arg == null)
 			console.warn(`An argument of type ${typeof arg} has been ignored`, element)
+		else if (typeof arg == "function" && arg.length == 0)
+			parseArgs(element, arg())
 		else if (typeof arg == "function")
 			arg(element)
 		else if ("length" in arg)
-			parseArgs(element, before, ...arg)
+			parseArgs(element, ...arg)
 		else
 			for (const key in arg)
 				setAttribute(element, key, arg[key])
@@ -173,7 +175,7 @@ const node = (name, args, options) => {
 		element = document.createElementNS(options.xmlns, name, opts)
 	else
 		element = document.createElement(name, opts)
-	parseArgs(element, null, args)
+	parseArgs(element, args)
 	return element
 }
 
