@@ -164,17 +164,13 @@ export class State extends SimpleState {
 		}
 	}
 
-	set(...args) {
-		if (args.length === 1) return this.set("value", ...args)
-
-		const [prop, value] = args
+	set(prop, value) {
+		if (arguments.length === 1) return this.set("value", prop)
 		this.#target[prop] = value
 	}
 
-	get(...args) {
-		if (args.length === 0) return this.get("value")
-
-		const prop = args[0]
+	get(prop) {
+		if (arguments.length === 0) return this.get("value")
 		return this.#target[prop]
 	}
 }
