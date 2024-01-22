@@ -4,8 +4,7 @@
 import {html} from "skooma.js"
 ```
 
-A functional-friendly helper library for procedural DOM generation and
-templating, with support for reactive state objects.
+A functional-friendly helper library for procedural DOM generation and templating, with support for reactive state objects.
 
 ## Overview
 
@@ -24,19 +23,26 @@ document.body.append(html.div(
 
 ### Basic DOM generation
 
-Accessing the `html` proxy with any string key returns a new node generator function:
+Accessing the `html` proxy with any string key returns a new node generator function. When called this function will generate a DOM node (HTML Tag). The name of the function becomes the tag name of the node.
 
 ```js
-html.div("Hello, World!")
+html.div()
 ```
 
-Attributes can be set by passing objects to the generator:
+Content and attributes can be set via the function arguments: Strings and DOM nodes are inserted as children, while other objects (except for some special cases) have their key-value pairs turned into attribute-value pairs on the 
 
 ```js
 html.div("Big Text", {style: "font-size: 1.4em"})
 ```
 
-Complex structures can easily achieved by nesting generator functions:
+Arrays, including nested ones, are iterated, and their values treated as arguments. This works both for inserting children and setting attributes.
+
+```js
+const content = [" ps: hi", {class: "title"}]
+html.h1({id: "main-heading"}, "Heading", content)
+```
+
+Nested tags can be generated with nested function calls:
 
 ```js
 html.div(
