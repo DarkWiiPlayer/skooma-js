@@ -1,15 +1,3 @@
-/*
-A functional HTML generation library.
-
-Example:
-	html.label(
-		html.span("Delete everything", {class: ["warning", "important"]}),
-		html.button("Click", {onClick: e => document.body.innerHTML=""}),
-	)
-or
-	html.ul([1, 2, 3, 4, 5].map(x => html.li(x)), {class: "numbers"})
-*/
-
 // Keep a referee alive until a referrer is collected
 const weakReferences = new WeakMap()
 const untilDeathDoThemPart = (referrer, reference) => {
@@ -50,8 +38,6 @@ const getCustom = args => args.reduce(
 	,undefined
 )
 
-const isElement = object => HTMLElement.prototype.isPrototypeOf(object)
-
 export const isReactive = object => !(object instanceof HTMLElement)
 	&& (object instanceof EventTarget)
 	&& ("value" in object)
@@ -59,7 +45,7 @@ export const isReactive = object => !(object instanceof HTMLElement)
 const toChild = arg => {
 	if (typeof arg == "string" || typeof arg == "number") {
 		return document.createTextNode(arg)
-	} else if (isElement(arg)) {
+	} else if (arg instanceof HTMLElement) {
 		return arg
 	} else if (isReactive(arg)) {
 		return reactiveChild(arg)
