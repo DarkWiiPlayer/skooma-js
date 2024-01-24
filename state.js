@@ -121,7 +121,6 @@ export class SimpleState extends EventTarget {
 export class State extends SimpleState {
 	#target
 	#shallow
-	#forwardCache
 
 	static isState(object) { return SimpleState.prototype.isPrototypeOf(object) }
 
@@ -150,18 +149,8 @@ export class State extends SimpleState {
 	set value(value) { this.values.value = value }
 	get value() { return this.values.value }
 
-	forward(property="value") {
-		if (!this.#forwardCache) this.#forwardCache = new Map()
-		const cached = this.#forwardCache.get(property)?.deref()
-		if (cached) {
-			return cached
-		} else {
-			const forwarded = new ForwardState(this, property)
-			const ref = new WeakRef(forwarded)
-			this.#forwardCache.set(property, ref)
-			forwardFinalizationRegistry.register(forwarded, [this.#forwardCache, property])
-			return forwarded
-		}
+	forward(property="value", methods) {
+		return new ForwardState(this, property, methods)
 	}
 
 	set(prop, value) {
@@ -175,26 +164,35 @@ export class State extends SimpleState {
 	}
 }
 
-const forwardFinalizationRegistry = new FinalizationRegistry(([cache, name]) => {
-	cache.remove(name)
-})
-
 export class ForwardState extends SimpleState {
 	#backend
 	#property
+	#methods
 
-	constructor(backend, property) {
+	constructor(backend, property, methods = {}) {
 		super()
+		this.#methods = methods
 		this.#backend = backend
 		this.#property = property
+
 		const ref = new WeakRef(this)
 		const abortController = new AbortController()
+		abortRegistry.register(this, abortController)
 		backend.addEventListener("change", event => {
 			const state = ref.deref()
 			if (state) {
-				const relevantChanges = event.changes
+				let relevantChanges = event.changes
 					.filter(({property: name}) => name === property)
-					.map(({from, to}) => ({property: "value", from, to}))
+				const get = methods.get
+				if (methods.get) {
+					relevantChanges = relevantChanges.map(
+						({from, to}) => ({property: "value", from: get(from), to: get(to)})
+					)
+				} else {
+					relevantChanges = relevantChanges.map(
+						({from, to}) => ({property: "value", from, to})
+					)
+				}
 				if (relevantChanges.length > 0)
 					state.dispatchEvent(new ChangeEvent(...relevantChanges))
 			} else {
@@ -203,8 +201,23 @@ export class ForwardState extends SimpleState {
 		}, {signal: abortController.signal})
 	}
 
-	get value() { return this.#backend.values[this.#property]}
-	set value(value) { this.#backend.values[this.#property] = value }
+	get value() {
+		const methods = this.#methods
+		if (methods.get) {
+			return methods.get(this.#backend.values[this.#property])
+		} else {
+			return this.#backend.values[this.#property]
+		}
+	}
+
+	set value(value) {
+		const methods = this.#methods
+		if (methods.set) {
+			this.#backend.values[this.#property] = methods.set(value)
+		} else {
+			this.#backend.values[this.#property] = value
+		}
+	}
 }
 
 class StorageChangeEvent extends Event {
