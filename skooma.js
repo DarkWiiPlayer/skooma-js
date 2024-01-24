@@ -54,17 +54,15 @@ const toChild = arg => {
 		return arg
 	else if (isReactive(arg))
 		return reactiveChild(arg)
-	else
-		return document.createComment("Placeholder for reactive content")
 }
 
 const reactiveChild = reactive => {
 	let ref
 	const abort = reactive.subscribe(value => {
 		if (ref && !ref.deref()) return abort()
-		const child = toChild(value)
-		if (ref) ref.deref().replaceWith(child)
+		const child = toChild(value) ?? document.createComment("Placeholder for reactive content")
 		untilDeathDoThemPart(child, reactive)
+		if (ref) ref.deref().replaceWith(child)
 		ref = new WeakRef(child)
 	})
 	return ref.deref()
@@ -102,9 +100,8 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 		setReactiveAttribute(element, attribute, value)
 	else if (typeof value === "function")
 		element.addEventListener(attribute, value, {signal: cleanupSignal})
-	else if (special) {
+	else if (special?.set)
 		special.set.call(element, value)
-	}
 	else if (value === true)
 		{if (!element.hasAttribute(attribute)) element.setAttribute(attribute, '')}
 	else if (value === false)
@@ -123,10 +120,11 @@ const setReactiveAttribute = (element, attribute, reactive) => {
 		multiAbort.abort()
 		setAttribute(element, attribute, value, multiAbort.signal)
 	})
+	const special = specialAttributes[attribute]
 	if (special?.hook && reactive.set) {
 		special.hook.call(element, () => {
 			const value = special.get.call(element, attribute)
-			if (value != old) reactive.set() = value
+			if (value != old) reactive.set(value)
 		})
 	}
 }
