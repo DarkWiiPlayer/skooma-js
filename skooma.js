@@ -1,10 +1,14 @@
 // Keep a referee alive until a referrer is collected
 const weakReferences = new WeakMap()
 const untilDeathDoThemPart = (referrer, reference) => {
-	if (!weakReferences.has(referrer)) {
-		weakReferences.set(referrer, new Set())
-	}
+	if (!weakReferences.has(referrer)) weakReferences.set(referrer, new Set())
 	weakReferences.get(referrer).add(reference)
+}
+
+class MultiAbortController {
+	#controller = new AbortController()
+	get signal() { return this.#controller.signal }
+	abort() { this.#controller.abort(); this.#controller = new AbortController() }
 }
 
 export const empty = Symbol("Explicit empty argument for Skooma")
@@ -38,55 +42,56 @@ const getCustom = args => args.reduce(
 	,undefined
 )
 
-export const isReactive = object => !(object instanceof HTMLElement)
-	&& (object instanceof EventTarget)
-	&& ("value" in object)
+export const isReactive = object => object
+	&& typeof object == "object"
+	&& !(object instanceof HTMLElement)
+	&& object.subscribe
 
 const toChild = arg => {
-	if (typeof arg == "string" || typeof arg == "number") {
+	if (typeof arg == "string" || typeof arg == "number")
 		return document.createTextNode(arg)
-	} else if (arg instanceof HTMLElement) {
+	else if (arg instanceof HTMLElement)
 		return arg
-	} else if (isReactive(arg)) {
+	else if (isReactive(arg))
 		return reactiveChild(arg)
-	} else {
+	else
 		return document.createComment("Placeholder for reactive content")
-	}
 }
 
 const reactiveChild = reactive => {
-	const ref = new WeakRef(toChild(reactive.value))
-	reactive.addEventListener("change", () => {
-		const value = ref.deref()
-		if (value)
-			value.replaceWith(reactiveChild(reactive))
-	}, {once: true})
-	untilDeathDoThemPart(ref.deref(), reactive)
+	let ref
+	const abort = reactive.subscribe(value => {
+		if (ref && !ref.deref()) return abort()
+		const child = toChild(value)
+		if (ref) ref.deref().replaceWith(child)
+		untilDeathDoThemPart(child, reactive)
+		ref = new WeakRef(child)
+	})
 	return ref.deref()
 }
 
 const specialAttributes = {
 	value: {
-		get: element => element.value,
-		set: (element, value) => {
-			element.setAttribute("value", value)
-			element.value = value
+		get() { return this.value },
+		set(value) {
+			this.setAttribute("value", value)
+			this.value = value
 		},
-		hook: (element, callback) => { element.addEventListener("input", callback) }
+		hook(callback) { this.addEventListener("input", callback) }
 	},
 	style: {
-		set: (element, value) => { insertStyles(element.style, value) }
+		set(value) { insertStyles(this.style, value) }
 	},
 	dataset: {
-		set: (element, value) => {
+		set(value) {
 			for (const [attribute2, value2] of Object.entries(value)) {
-				element.dataset[attribute2] = parseAttribute(value2)
+				this.dataset[attribute2] = parseAttribute(value2)
 			}
 		}
 	},
 	shadowRoot: {
-		set: (element, value) => {
-			parseArgs((element.shadowRoot || element.attachShadow({mode: "open"})), value)
+		set(value) {
+			parseArgs((this.shadowRoot || this.attachShadow({mode: "open"})), value)
 		}
 	}
 }
@@ -98,7 +103,7 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 	else if (typeof value === "function")
 		element.addEventListener(attribute.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), value, {signal: cleanupSignal})
 	else if (special) {
-		special.set(element, value)
+		special.set.call(element, value)
 	}
 	else if (value === true)
 		{if (!element.hasAttribute(attribute)) element.setAttribute(attribute, '')}
@@ -109,26 +114,19 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 	}
 }
 
-const setReactiveAttribute = (element, attribute, reactive, abortController) => {
+const setReactiveAttribute = (element, attribute, reactive) => {
 	untilDeathDoThemPart(element, reactive)
-
-	if (abortController) abortController.abort()
-	abortController = new AbortController()
-
-	const ref = new WeakRef(element)
-	setAttribute(element, attribute, reactive.value, abortController.signal)
-
-	reactive.addEventListener("change", () => {
-		const element = ref.deref()
-		if (element)
-			setReactiveAttribute(element, attribute, reactive, abortController)
-	}, {once: true})
-
-	const special = specialAttributes[attribute]
-	if (special?.hook) {
-		special.hook(element, () => {
-			const value = special.get(element, attribute)
-			if (value != reactive.value) reactive.value = value
+	const multiAbort = new MultiAbortController()
+	let old
+	reactive.subscribe(value => {
+		old = value
+		multiAbort.abort()
+		setAttribute(element, attribute, value, multiAbort.signal)
+	})
+	if (special?.hook && reactive.set) {
+		special.hook.call(element, () => {
+			const value = special.get.call(element, attribute)
+			if (value != old) reactive.set() = value
 		})
 	}
 }
