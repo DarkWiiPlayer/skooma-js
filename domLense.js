@@ -12,8 +12,6 @@ class ChildObserver extends MutationObserver {
 	}
 }
 
-const childObserver = new ChildObserver()
-
 export const lense = (methods, extra) => {
 	if (extra) return lense(extra)(methods)
 
@@ -70,7 +68,10 @@ export const lense = (methods, extra) => {
 		}
 	}
 
-	return element => new Proxy(element, traps)
+	return element => {
+		if (!(element instanceof Element)) throw(new Error("Creating domLense on non-element"))
+		return new Proxy(element, traps)
+	}
 }
 
 export default lense
