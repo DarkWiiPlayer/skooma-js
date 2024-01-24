@@ -52,7 +52,7 @@ const getCustom = args => args.reduce(
 
 const isElement = object => HTMLElement.prototype.isPrototypeOf(object)
 
-const isReactive = object => !(object instanceof HTMLElement)
+export const isReactive = object => !(object instanceof HTMLElement)
 	&& (object instanceof EventTarget)
 	&& ("value" in object)
 
@@ -63,6 +63,8 @@ const toChild = arg => {
 		return arg
 	} else if (isReactive(arg)) {
 		return reactiveChild(arg)
+	} else {
+		return document.createComment("Placeholder for reactive content")
 	}
 }
 
@@ -148,20 +150,22 @@ const setReactiveAttribute = (element, attribute, reactive, abortController) => 
 const parseArgs = (element, ...args) => {
 	if (element.content) element = element.content
 	for (const arg of args) if (arg !== empty) {
-		const child = toChild(arg)
-		if (child)
-			element.append(child)
-		else if (arg === undefined || arg == null)
-			console.warn(`An argument of type ${typeof arg} has been ignored`, element)
-		else if (typeof arg == "function" && arg.length == 0)
-			parseArgs(element, arg())
-		else if (typeof arg == "function")
-			arg(element)
-		else if ("length" in arg)
+		if (arg instanceof Array) {
 			parseArgs(element, ...arg)
-		else
-			for (const key in arg)
-				setAttribute(element, key, arg[key])
+		} else {
+			const child = toChild(arg)
+			if (child)
+				element.append(child)
+			else if (arg === undefined || arg == null)
+				console.warn(`An argument of type ${typeof arg} has been ignored`, element)
+			else if (typeof arg == "function" && arg.length == 0)
+				parseArgs(element, arg())
+			else if (typeof arg == "function")
+				arg(element)
+			else
+				for (const key in arg)
+					setAttribute(element, key, arg[key])
+		}
 	}
 }
 
