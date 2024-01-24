@@ -284,8 +284,12 @@ const attributeObserver = new MutationObserver(mutations => {
 	}
 })
 
-export const component = (generator, name) => {
-	name = name ?? camelToKebab(generator.name)
+export const component = (name, generator, methods) => {
+	if (typeof name === "function") {
+		methods = generator
+		generator = name
+		name = camelToKebab(generator.name)
+	}
 	const Element = class extends HTMLElement{
 		constructor() {
 			super()
@@ -298,8 +302,11 @@ export const component = (generator, name) => {
 				}
 			})
 			attributeObserver.observe(this, {attributes: true})
-			this.replaceChildren(generator(this))
+			this.replaceChildren(generator.call(this, this.state))
 		}
+	}
+	if (methods) {
+		Object.defineProperties(Element.prototype, Object.getOwnPropertyDescriptors(methods))
 	}
 	customElements.define(name, Element)
 	return Element;
