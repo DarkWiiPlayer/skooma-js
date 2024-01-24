@@ -357,7 +357,7 @@ class ComposedState extends SimpleState {
 		const value = this.#func(...this.#states.map(state => state.value))
 		const change = {property: "value", from: this.value, to: value}
 		this.value = value
-		this.dispatchEvent(new ChangeEvent([change]))
+		this.dispatchEvent(new ChangeEvent(change))
 	}
 }
 
