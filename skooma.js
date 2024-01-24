@@ -101,7 +101,7 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 	if (isReactive(value))
 		setReactiveAttribute(element, attribute, value)
 	else if (typeof value === "function")
-		element.addEventListener(attribute.replace(/^on[A-Z]/, x => x.charAt(x.length-1).toLowerCase()), value, {signal: cleanupSignal})
+		element.addEventListener(attribute, value, {signal: cleanupSignal})
 	else if (special) {
 		special.set.call(element, value)
 	}
