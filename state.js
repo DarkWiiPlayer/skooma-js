@@ -74,6 +74,9 @@ export class SimpleState extends EventTarget {
 		return () => controller.abort()
 	}
 
+	get() { return this.value }
+	set(value) { this.value = value }
+
 	emit(property, from, to, options={}) {
 		const change = {property, from, to, ...options}
 		if (!this.synchronous) {
@@ -146,9 +149,6 @@ export class State extends SimpleState {
 		})
 	}
 
-	set value(value) { this.values.value = value }
-	get value() { return this.values.value }
-
 	forward(property="value", methods) {
 		return new ForwardState(this, property, methods)
 	}
@@ -158,10 +158,12 @@ export class State extends SimpleState {
 		this.#target[prop] = value
 	}
 
-	get(prop) {
-		if (arguments.length === 0) return this.get("value")
+	get(prop="value") {
 		return this.#target[prop]
 	}
+
+	set value(value) { this.set(value) }
+	get value() { return this.get() }
 }
 
 export class ForwardState extends SimpleState {
@@ -338,7 +340,9 @@ class ComposedState extends SimpleState {
 
 	#microtaskQueued
 	scheduleUpdate() {
-		if (this.defer) {
+		if (this.synchronous) {
+			this.update()
+		} else {
 			if (!this.#microtaskQueued) {
 				queueMicrotask(() => {
 					this.#microtaskQueued = false
@@ -346,8 +350,6 @@ class ComposedState extends SimpleState {
 				})
 			}
 			this.#microtaskQueued = true
-		} else {
-			this.update()
 		}
 	}
 
@@ -359,7 +361,7 @@ class ComposedState extends SimpleState {
 	}
 }
 
-export const compose = func => (...states) => new ComposedState(func, {defer: true}, ...states)
+export const compose = func => (...states) => new ComposedState(func, {synchronous: false}, ...states)
 
 const eventName = "mutation"
 
@@ -412,7 +414,9 @@ export class DOMState extends SimpleState {
 
 		this.#old = current
 
-		if (this.defer) {
+		if (this.synchronous) {
+			this.dispatchEvent(new ChangeEvent(["value", current]))
+		} else {
 			if (!this.#changedValue) {
 				queueMicrotask(() => {
 					this.#changedValue = false
@@ -420,8 +424,6 @@ export class DOMState extends SimpleState {
 				})
 				this.#changedValue = current
 			}
-		} else {
-			this.dispatchEvent(new ChangeEvent(["value", current]))
 		}
 	}
 }
