@@ -5,6 +5,7 @@ const untilDeathDoThemPart = (referrer, reference) => {
 	weakReferences.get(referrer).add(reference)
 }
 
+// Like AbortController, but resets after each abort
 class MultiAbortController {
 	#controller = new AbortController()
 	get signal() { return this.#controller.signal }
@@ -13,17 +14,17 @@ class MultiAbortController {
 
 export const empty = Symbol("Explicit empty argument for Skooma")
 
-const keyToPropName = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
+const snakeToCSS = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
 
 const insertStyles = (rule, styles) => {
 	for (const [key, value] of Object.entries(styles))
 		if (typeof value == "undefined")
-			rule.removeProperty(keyToPropName(key))
+			rule.removeProperty(snakeToCSS(key))
 	else
-		rule.setProperty(keyToPropName(key), value.toString())
+		rule.setProperty(snakeToCSS(key), value.toString())
 }
 
-const parseAttribute = (attribute) => {
+const processAttribute = (attribute) => {
 	if (typeof attribute == "string" || typeof attribute == "number")
 		return attribute
 	else if (attribute && "join" in attribute)
@@ -83,13 +84,13 @@ const specialAttributes = {
 	dataset: {
 		set(value) {
 			for (const [attribute2, value2] of Object.entries(value)) {
-				this.dataset[attribute2] = parseAttribute(value2)
+				this.dataset[attribute2] = processAttribute(value2)
 			}
 		}
 	},
 	shadowRoot: {
 		set(value) {
-			parseArgs((this.shadowRoot || this.attachShadow({mode: "open"})), value)
+			processArgs((this.shadowRoot || this.attachShadow({mode: "open"})), value)
 		}
 	}
 }
@@ -107,10 +108,11 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 	else if (value === false)
 		element.removeAttribute(attribute)
 	else {
-		element.setAttribute(attribute, parseAttribute(value))
+		element.setAttribute(attribute, processAttribute(value))
 	}
 }
 
+// (Two-way) binding between an attribute and a state container
 const setReactiveAttribute = (element, attribute, reactive) => {
 	untilDeathDoThemPart(element, reactive)
 	const multiAbort = new MultiAbortController()
@@ -129,11 +131,11 @@ const setReactiveAttribute = (element, attribute, reactive) => {
 	}
 }
 
-const parseArgs = (element, ...args) => {
+const processArgs = (element, ...args) => {
 	if (element.content) element = element.content
 	for (const arg of args) if (arg !== empty) {
 		if (arg instanceof Array) {
-			parseArgs(element, ...arg)
+			processArgs(element, ...arg)
 		} else {
 			const child = toChild(arg)
 			if (child)
@@ -141,7 +143,7 @@ const parseArgs = (element, ...args) => {
 			else if (arg === undefined || arg == null)
 				console.warn(`An argument of type ${typeof arg} has been ignored`, element)
 			else if (typeof arg == "function" && arg.length == 0)
-				parseArgs(element, arg())
+				processArgs(element, arg())
 			else if (typeof arg == "function")
 				arg(element)
 			else
@@ -161,7 +163,7 @@ const node = (name, args, options) => {
 		element = document.createElementNS(options.xmlns, name, opts)
 	else
 		element = document.createElement(name, opts)
-	parseArgs(element, args)
+	processArgs(element, args)
 	return element
 }
 
