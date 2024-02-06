@@ -59,3 +59,16 @@ export const domArray = (methods, extra) => {
 		return new Proxy(element, traps)
 	}
 }
+
+export const meta = (element=document.head) => new Proxy(element, {
+	get: (target, name) => target.querySelector(`meta[name="${name}"]`)?.content,
+	set: (target, name, value) => {
+		let meta = target.querySelector(`meta[name="${name}"]`)
+		if (!meta) {
+			meta = document.createElement("meta")
+			meta.name = name
+			target.append(meta)
+		}
+		meta.content = value
+	}
+})
