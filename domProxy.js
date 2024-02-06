@@ -1,5 +1,5 @@
-export const lens = (methods, extra) => {
-	if (extra) return lens(extra)(methods)
+export const domArray = (methods, extra) => {
+	if (extra) return domArray(extra)(methods)
 
 	const traps = {
 		get(target, prop) {
@@ -55,9 +55,7 @@ export const lens = (methods, extra) => {
 	}
 
 	return element => {
-		if (!(element instanceof Element)) throw(new Error("Creating domLens on non-element"))
+		if (!(element instanceof Element)) throw(new Error("Creating domArray on non-element"))
 		return new Proxy(element, traps)
 	}
 }
-
-export default lens
