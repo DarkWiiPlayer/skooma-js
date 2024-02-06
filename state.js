@@ -222,59 +222,6 @@ export class ForwardState extends SimpleState {
 	}
 }
 
-class StorageChangeEvent extends Event {
-	constructor(storage, key, value, targetState) {
-		super("storagechange")
-		this.storageArea = storage
-		this.key = key
-		this.newValue = value
-		this.targetState = targetState
-	}
-}
-
-export class StoredState extends State {
-	#storage
-
-	constructor(init, options={}) {
-		super({}, options)
-		this.#storage = options.storage ?? localStorage ?? new MapStorage()
-
-		// Initialise storage from defaults
-		for (const [prop, value] of Object.entries(init)) {
-			if (this.#storage[prop] === undefined)
-				this.set(prop, value)
-		}
-
-		// Emit change events for any changed keys
-		for (let i=0; i<this.#storage.length; i++) {
-			const key = this.#storage.key(i)
-			const value = this.#storage[key]
-			if (value !== JSON.stringify(init[key]))
-				this.emit(key, value)
-		}
-
-		// Listen for changes from other windows
-		const handler = event => {
-			if (event.targetState !== this && event.storageArea == this.#storage) {
-				this.emit(event.key, JSON.parse(event.newValue))
-			}
-		}
-		addEventListener("storage", handler)
-		addEventListener("storagechange", handler)
-	}
-
-	set(prop, value) {
-		const json = JSON.stringify(value)
-		dispatchEvent(new StorageChangeEvent(this.#storage, prop, json, this))
-		this.#storage[prop] = json
-	}
-
-	get(prop) {
-		const value = this.#storage[prop]
-		return value && JSON.parse(value)
-	}
-}
-
 const attributeObserver = new MutationObserver(mutations => {
 	for (const {type, target, attributeName: name} of mutations) {
 		if (type == "attributes") {
