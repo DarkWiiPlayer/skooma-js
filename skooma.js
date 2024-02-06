@@ -24,51 +24,6 @@ const insertStyles = (rule, styles) => {
 		rule.setProperty(snakeToCSS(key), value.toString())
 }
 
-const processAttribute = (attribute) => {
-	if (typeof attribute == "string" || typeof attribute == "number")
-		return attribute
-	else if (attribute && "join" in attribute)
-		return attribute.join(" ")
-	else
-		return JSON.stringify(attribute)
-}
-
-const defined = (value, fallback) => typeof value != "undefined" ? value : fallback
-const getCustom = args => args.reduce(
-	(current, argument) => Array.isArray(argument)
-		? defined(getCustom(argument), current)
-		: (argument && typeof argument == "object")
-		? defined(argument.is, current)
-		: current
-	,undefined
-)
-
-export const isObservable = object => object
-	&& typeof object == "object"
-	&& !(object instanceof HTMLElement)
-	&& object.subscribe
-
-const toChild = arg => {
-	if (typeof arg == "string" || typeof arg == "number")
-		return document.createTextNode(arg)
-	else if (arg instanceof HTMLElement)
-		return arg
-	else if (isObservable(arg))
-		return reactiveChild(arg)
-}
-
-const reactiveChild = observable => {
-	let ref
-	const abort = observable.subscribe(value => {
-		if (ref && !ref.deref()) return abort()
-		const child = toChild(value) ?? document.createComment("Placeholder for reactive content")
-		untilDeathDoThemPart(child, observable)
-		if (ref) ref.deref().replaceWith(child)
-		ref = new WeakRef(child)
-	})
-	return ref.deref()
-}
-
 const specialAttributes = {
 	value: {
 		get() { return this.value },
@@ -95,6 +50,47 @@ const specialAttributes = {
 	}
 }
 
+const processAttribute = (attribute) => {
+	if (typeof attribute == "string" || typeof attribute == "number")
+		return attribute
+	else if (attribute && "join" in attribute)
+		return attribute.join(" ")
+	else
+		return JSON.stringify(attribute)
+}
+
+const defined = (value, fallback) => typeof value != "undefined" ? value : fallback
+const getCustom = args => args.reduce(
+	(current, argument) => Array.isArray(argument)
+		? defined(getCustom(argument), current)
+		: (argument && typeof argument == "object")
+		? defined(argument.is, current)
+		: current
+	,undefined
+)
+
+export const isObservable = object => object && object.observable
+
+const toElement = arg => {
+	if (typeof arg == "string" || typeof arg == "number")
+		return document.createTextNode(arg)
+	else if (arg instanceof HTMLElement)
+		return arg
+	else if (isObservable(arg))
+		return reactiveElement(arg)
+}
+
+export const reactiveElement = observable => {
+	const element = toElement(observable.value)
+	untilDeathDoThemPart(element, observable)
+	const ref = new WeakRef(element)
+	observable.addEventListener("change", () => {
+		const next = reactiveElement(observable)
+		ref.deref()?.replaceWith(next)
+	}, {once: true})
+	return element
+}
+
 const setAttribute = (element, attribute, value, cleanupSignal) => {
 	const special = specialAttributes[attribute]
 	if (isObservable(value))
@@ -114,19 +110,20 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 
 // (Two-way) binding between an attribute and a state container
 const setReactiveAttribute = (element, attribute, observable) => {
-	untilDeathDoThemPart(element, observable)
 	const multiAbort = new MultiAbortController()
-	let old
-	observable.subscribe(value => {
-		old = value
+
+	observable.addEventListener("change", () => {
 		multiAbort.abort()
-		setAttribute(element, attribute, value, multiAbort.signal)
+		setAttribute(element, attribute, observable.value, multiAbort.signal)
 	})
+	setAttribute(element, attribute, observable.value, multiAbort.signal)
+
 	const special = specialAttributes[attribute]
-	if (special?.hook && observable.set) {
+	if (special.hook) {
+		untilDeathDoThemPart(element, observable)
 		special.hook.call(element, () => {
-			const value = special.get.call(element, attribute)
-			if (value != old) observable.set(value)
+			const current = special.get.call(element, attribute)
+			if (current != observable.value) observable.value = current
 		})
 	}
 }
@@ -137,7 +134,7 @@ const processArgs = (element, ...args) => {
 		if (arg instanceof Array) {
 			processArgs(element, ...arg)
 		} else {
-			const child = toChild(arg)
+			const child = toElement(arg)
 			if (child)
 				element.append(child)
 			else if (arg === undefined || arg == null)
@@ -185,18 +182,23 @@ export const handle = fn => event => { event.preventDefault(); return fn(event) 
 export const fragment = (...elements) => {
 	const fragment = new DocumentFragment()
 	for (const element of elements)
-		fragment.append(element)
+		fragment.append(toElement(element))
 	return fragment
 }
 
-// Turns a template literal into document fragment.
-// Strings are returned as text nodes.
-// Elements are inserted in between.
+/**
+Turns a template literal into document fragment.
+Strings are returned as text nodes.
+Elements are inserted in between.
+@param {Array<String>} literals
+@param {Array<any>} items
+@return {DocumentFragment}
+*/
 const textFromTemplate = (literals, items) => {
 	const fragment = new DocumentFragment()
 	for (const key in items) {
 		fragment.append(document.createTextNode(literals[key]))
-		fragment.append(items[key])
+		fragment.append(toElement(items[key]))
 	}
 	fragment.append(document.createTextNode(literals.at(-1)))
 	return fragment
