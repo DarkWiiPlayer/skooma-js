@@ -1,17 +1,3 @@
-class ChildObserver extends MutationObserver {
-	constructor() {
-		super(mutations => {
-			for (const mutation of mutations) {
-				mutation.target.dispatchEvent(new CustomEvent("change", {detail: mutation}))
-			}
-		})
-	}
-
-	observe(element) {
-		MutationObserver.prototype.observe.call(this, element, { childList: true })
-	}
-}
-
 export const lense = (methods, extra) => {
 	if (extra) return lense(extra)(methods)
 
