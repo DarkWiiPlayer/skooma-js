@@ -43,7 +43,7 @@ const getCustom = args => args.reduce(
 	,undefined
 )
 
-export const isReactive = object => object
+export const isObservable = object => object
 	&& typeof object == "object"
 	&& !(object instanceof HTMLElement)
 	&& object.subscribe
@@ -53,16 +53,16 @@ const toChild = arg => {
 		return document.createTextNode(arg)
 	else if (arg instanceof HTMLElement)
 		return arg
-	else if (isReactive(arg))
+	else if (isObservable(arg))
 		return reactiveChild(arg)
 }
 
-const reactiveChild = reactive => {
+const reactiveChild = observable => {
 	let ref
-	const abort = reactive.subscribe(value => {
+	const abort = observable.subscribe(value => {
 		if (ref && !ref.deref()) return abort()
 		const child = toChild(value) ?? document.createComment("Placeholder for reactive content")
-		untilDeathDoThemPart(child, reactive)
+		untilDeathDoThemPart(child, observable)
 		if (ref) ref.deref().replaceWith(child)
 		ref = new WeakRef(child)
 	})
@@ -97,7 +97,7 @@ const specialAttributes = {
 
 const setAttribute = (element, attribute, value, cleanupSignal) => {
 	const special = specialAttributes[attribute]
-	if (isReactive(value))
+	if (isObservable(value))
 		setReactiveAttribute(element, attribute, value)
 	else if (typeof value === "function")
 		element.addEventListener(attribute, value, {signal: cleanupSignal})
@@ -113,20 +113,20 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 }
 
 // (Two-way) binding between an attribute and a state container
-const setReactiveAttribute = (element, attribute, reactive) => {
-	untilDeathDoThemPart(element, reactive)
+const setReactiveAttribute = (element, attribute, observable) => {
+	untilDeathDoThemPart(element, observable)
 	const multiAbort = new MultiAbortController()
 	let old
-	reactive.subscribe(value => {
+	observable.subscribe(value => {
 		old = value
 		multiAbort.abort()
 		setAttribute(element, attribute, value, multiAbort.signal)
 	})
 	const special = specialAttributes[attribute]
-	if (special?.hook && reactive.set) {
+	if (special?.hook && observable.set) {
 		special.hook.call(element, () => {
 			const value = special.get.call(element, attribute)
-			if (value != old) reactive.set(value)
+			if (value != old) observable.set(value)
 		})
 	}
 }
