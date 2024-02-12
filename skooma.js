@@ -12,18 +12,37 @@ class MultiAbortController {
 	abort() { this.#controller.abort(); this.#controller = new AbortController() }
 }
 
+/** A symbol representing nothing to be appended to an element */
 export const empty = Symbol("Explicit empty argument for Skooma")
 
+/** Converts a snake-case string to a CSS property name
+* @param {string} key
+* @return {string}
+*/
 const snakeToCSS = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
 
-const insertStyles = (rule, styles) => {
-	for (const [key, value] of Object.entries(styles))
+/**
+* @param {CSSStyleDeclaration} style The style property of a node
+* @param {object} rules A map of snake case property names to css values
+*/
+const insertStyles = (style, rules) => {
+	for (const [key, value] of Object.entries(rules))
 		if (typeof value == "undefined")
-			rule.removeProperty(snakeToCSS(key))
+			style.removeProperty(snakeToCSS(key))
 	else
-		rule.setProperty(snakeToCSS(key), value.toString())
+		style.setProperty(snakeToCSS(key), value.toString())
 }
 
+/** @typedef SpecialAttributeDescriptor
+* @type {object}
+* @property {function(this:any):void} [get]
+* @property {function(this:any,any):void} [set]
+* @property {function(this:any,function():void):void} [hook]
+*/
+
+/**
+* @type {Object<string,SpecialAttributeDescriptor>}
+*/
 const specialAttributes = {
 	value: {
 		get() { return this.value },
@@ -50,7 +69,7 @@ const specialAttributes = {
 	}
 }
 
-const processAttribute = (attribute) => {
+const processAttribute = attribute => {
 	if (typeof attribute == "string" || typeof attribute == "number")
 		return attribute
 	else if (attribute && "join" in attribute)
@@ -59,7 +78,12 @@ const processAttribute = (attribute) => {
 		return JSON.stringify(attribute)
 }
 
+/** Returns a fallback if value is defined */
 const defined = (value, fallback) => typeof value != "undefined" ? value : fallback
+
+/** Recursively finds the last 'is' attribute in a list nested array of objects
+* @param {Array} args
+*/
 const getCustom = args => args.reduce(
 	(current, argument) => Array.isArray(argument)
 		? defined(getCustom(argument), current)
@@ -69,17 +93,35 @@ const getCustom = args => args.reduce(
 	,undefined
 )
 
+/**
+* @typedef Observable
+* @type {EventTarget|object}
+* @property {any} value
+*/
+
+/** Returns whether an object is an observable according to skooma's contract
+* @param {any} object
+* @return {object is Observable}
+*/
 export const isObservable = object => object && object.observable
 
-const toElement = arg => {
-	if (typeof arg == "string" || typeof arg == "number")
-		return document.createTextNode(arg)
-	else if (arg instanceof HTMLElement)
-		return arg
-	else if (isObservable(arg))
-		return reactiveElement(arg)
+/** Turns an argument into something that can be inserted as a child into a DOM node
+* @param {any} value
+* @return {Element|Text}
+*/
+const toElement = value => {
+	if (typeof value == "string" || typeof value == "number")
+		return document.createTextNode(value.toString())
+	else if (value instanceof Element)
+		return value
+	else if (isObservable(value))
+		return reactiveElement(value)
 }
 
+/**
+* @param {Observable} observable
+* @return {Element|Text}
+*/
 export const reactiveElement = observable => {
 	const element = toElement(observable.value)
 	untilDeathDoThemPart(element, observable)
@@ -91,6 +133,12 @@ export const reactiveElement = observable => {
 	return element
 }
 
+/** Set an attribute on an element
+* @param {Element} element
+* @param {string} attribute
+* @param {any} value
+* @param {AbortSignal} [cleanupSignal]
+*/
 const setAttribute = (element, attribute, value, cleanupSignal) => {
 	const special = specialAttributes[attribute]
 	if (isObservable(value))
@@ -108,7 +156,11 @@ const setAttribute = (element, attribute, value, cleanupSignal) => {
 	}
 }
 
-// (Two-way) binding between an attribute and a state container
+/** Set up a binding between an attribute and an observable
+* @param {Element} element
+* @param {string} attribute
+* @param {Observable} observable
+*/
 const setReactiveAttribute = (element, attribute, observable) => {
 	const multiAbort = new MultiAbortController()
 
@@ -128,10 +180,13 @@ const setReactiveAttribute = (element, attribute, observable) => {
 	}
 }
 
+/** Processes a list of arguments for an HTML Node
+* @param {Element} element
+* @param {Array} args
+*/
 const processArgs = (element, ...args) => {
-	if (element.content) element = element.content
 	for (const arg of args) if (arg !== empty) {
-		if (arg instanceof Array) {
+		if (Array.isArray(arg)) {
 			processArgs(element, ...arg)
 		} else {
 			const child = toElement(arg)
@@ -150,6 +205,11 @@ const processArgs = (element, ...args) => {
 	}
 }
 
+/** Creates a new node
+* @param {String} name
+* @param {Array} args
+* @param {Object} options
+*/
 const node = (name, args, options) => {
 	let element
 	const custom = getCustom(args)
@@ -165,6 +225,7 @@ const node = (name, args, options) => {
 }
 
 const nameSpacedProxy = (options={}) => new Proxy(Window, {
+	/** @param {string} prop */
 	get: (_target, prop, _receiver) => { return (...args) => node(prop, args, options) },
 	has: (_target, _prop) => true,
 })
@@ -175,10 +236,15 @@ export default html
 
 // Other utility exports
 
-// Wraps an event handler in a function that calls preventDefault on the event
+/** Wraps an event handler in a function that calls preventDefault on the event
+* @param {function(event) : event} fn
+* @return {function(event)}
+*/
 export const handle = fn => event => { event.preventDefault(); return fn(event) }
 
-// Wraps a list of elements in a document fragment
+/** Wraps a list of elements in a document fragment
+* @param {Array<Element|String>} elements
+*/
 export const fragment = (...elements) => {
 	const fragment = new DocumentFragment()
 	for (const element of elements)
@@ -186,13 +252,12 @@ export const fragment = (...elements) => {
 	return fragment
 }
 
-/**
-Turns a template literal into document fragment.
-Strings are returned as text nodes.
-Elements are inserted in between.
-@param {Array<String>} literals
-@param {Array<any>} items
-@return {DocumentFragment}
+/** Turns a template literal into document fragment.
+* Strings are returned as text nodes.
+* Elements are inserted in between.
+* @param {Array<String>} literals
+* @param {Array<any>} items
+* @return {DocumentFragment}
 */
 const textFromTemplate = (literals, items) => {
 	const fragment = new DocumentFragment()
@@ -200,11 +265,15 @@ const textFromTemplate = (literals, items) => {
 		fragment.append(document.createTextNode(literals[key]))
 		fragment.append(toElement(items[key]))
 	}
-	fragment.append(document.createTextNode(literals.at(-1)))
+	fragment.append(document.createTextNode(literals[literals.length-1]))
 	return fragment
 }
 
+/**
+* @param {String|Array<String>} data
+* @param {Array<String|Element>} items
+*/
 export const text = (data="", ...items) =>
-	typeof data == "object" && "at" in data
+	Array.isArray(data)
 		? textFromTemplate(data, items)
 		: document.createTextNode(data)
