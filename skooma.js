@@ -134,6 +134,9 @@ class ReplacedEvent extends Event {
 	}
 }
 
+/** @type {WeakMap<Text|Element,Text|Element>} */
+export const newer = new WeakMap()
+
 /**
 * @param {Observable} observable
 * @return {Element|Text}
@@ -147,6 +150,7 @@ export const reactiveElement = observable => {
 		const element = ref.deref()
 		if (element.dispatchEvent(new ReplaceEvent(next)))
 			element.replaceWith(next)
+		newer.set(this, next)
 		element.dispatchEvent(new ReplacedEvent(next))
 	}, {once: true})
 	return element
