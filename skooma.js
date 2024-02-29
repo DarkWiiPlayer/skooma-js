@@ -118,6 +118,22 @@ const toElement = value => {
 		return reactiveElement(value)
 }
 
+class ReplaceEvent extends Event {
+	/** @param {Element|Text} next */
+	constructor(next) {
+		super("replace", {bubbles: true, cancelable: true})
+		this.next = next
+	}
+}
+
+class ReplacedEvent extends Event {
+	/** @param {Element|Text} next */
+	constructor(next) {
+		super("replaced")
+		this.next = next
+	}
+}
+
 /**
 * @param {Observable} observable
 * @return {Element|Text}
@@ -128,7 +144,10 @@ export const reactiveElement = observable => {
 	const ref = new WeakRef(element)
 	observable.addEventListener("change", () => {
 		const next = reactiveElement(observable)
-		ref.deref()?.replaceWith(next)
+		const element = ref.deref()
+		if (element.dispatchEvent(new ReplaceEvent(next)))
+			element.replaceWith(next)
+		element.dispatchEvent(new ReplacedEvent(next))
 	}, {once: true})
 	return element
 }
