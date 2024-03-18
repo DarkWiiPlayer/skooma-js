@@ -3,7 +3,7 @@
 	"version": "1.7.0",
 	"author": "darkwiiplayer",
 	"license": "Unlicense",
-	"main": "skooma.js",
+	"main": "render.js",
 	"type": "module",
 	"repository": {
 		"type": "git",
