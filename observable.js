@@ -115,7 +115,7 @@ export class Observable extends EventTarget {
 
 	/**
 	 * @param {string} prop
-	 * @param {function} callback
+	 * @param {function(any):void} callback
 	 */
 	subscribe(prop, callback) {
 		const controller = new AbortController()
@@ -162,20 +162,27 @@ export class Observable extends EventTarget {
 }
 
 export class ObservableObject extends Observable {
-	#shallow
 
-	constructor(target={}, {shallow, ...options}={}) {
+	/**
+	 * @param {Object} target
+	 * @param {Object} options
+	 */
+	constructor(target={}, {shallow=true, ...options}={}) {
 		super(options)
-		this.#shallow = !!shallow
-		this[target] = target
+		Object.defineProperty(this, "target", target)
 		this.values = new Proxy(target, {
+			/**
+			 * @param {Object} target
+			 * @param {String} prop
+			 * @param {any} value
+			 */
 			set: (target, prop, value) => {
 				const old = target[prop]
 				if (old === value) {
 					return true
 				} else {
 					if (this.enqueue(prop, old, value)) {
-						if (!this.#shallow) {
+						if (!shallow) {
 							if (old instanceof Observable) this.disown(prop, old)
 							if (value instanceof Observable) this.adopt(prop, value)
 						}
@@ -186,17 +193,26 @@ export class ObservableObject extends Observable {
 					}
 				}
 			},
+			/**
+			 * @param {Object} target
+			 * @param {String} prop
+			 */
 			get: (target, prop) => target[prop],
 		})
 	}
 
-	proxy(prop, {get, set, ...options}={}) {
+	/**
+	 * @param {string} prop
+	 * @param {Object} options
+	 */
+	proxy(prop, {get=undefined, set=undefined, ...options}={}) {
 		const proxy = new ProxiedObservableValue(this, prop, {values: this.values, ...options})
 		if (get) proxy.get = get
 		if (set) proxy.set = set
 		return proxy
 	}
 
+	/** @param {Change[]} changes */
 	emit(...changes) {
 		this.dispatchEvent(new MultiChangeEvent(...changes))
 	}
@@ -204,6 +220,10 @@ export class ObservableObject extends Observable {
 	/** @type Map<Observable, Map<String, Function>> */
 	#nested = new Map()
 
+	/** Adopts an obsercable to be notified of its changes
+	 * @param {string} prop
+	 * @param {Observable} observable
+	 */
 	adopt(prop, observable) {
 		let handlers = this.#nested.get(observable)
 		if (!handlers) {
@@ -218,6 +238,10 @@ export class ObservableObject extends Observable {
 		observable.addEventListener("change", handler, {signal: this.signal})
 	}
 
+	/** Undoes the adoption of a nested observable, cancelling the associated event hook
+	 * @param {string} prop
+	 * @param {Observable} observable
+	 */
 	disown(prop, observable) {
 		const handlers = this.#nested.get(observable)
 		const handler = handlers.get(prop)
@@ -232,6 +256,10 @@ export class ObservableObject extends Observable {
 export class ObservableValue extends Observable {
 	#value
 
+	/**
+	 * @param {any} value
+	 * @param {Object} options
+	 */
 	constructor(value, options) {
 		super(options)
 		this.#value = value
@@ -245,26 +273,32 @@ export class ObservableValue extends Observable {
 	}
 
 	/**
-	 * @param {function(any):undefined} callback
-	 * @param {function(any):undefined} _callback
+	 * @param {string} prop
+	 * @param {function(any):void} callback
 	 */
-	subscribe(callback, _callback) {
-		this.constructor.prototype.subscribe.call(this, "value", callback)
+	subscribe(prop, callback) {
+		// @ts-ignore
+		if (typeof(prop) == "function") [prop, callback] = ["value", prop]
+
+		this.constructor.prototype.subscribe.call(this, prop, callback)
 	}
 
+	/** @param {Change[]} changes */
 	emit(...changes) {
 		this.dispatchEvent(new ValueChangeEvent(...changes))
 	}
 }
 
 class ProxiedObservableValue extends ObservableValue {
-	#backend
 	#values
 	#prop
 
+	/**
+	 * @param {Observable} backend
+	 * @param {string} prop
+	 */
 	constructor(backend, prop, {values=backend, ...options}={}) {
 		super(options)
-		this.#backend = backend
 		this.#values = values
 		this.#prop = prop
 
