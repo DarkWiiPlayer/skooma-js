@@ -361,7 +361,11 @@ export class ObservableElement extends Observable {
 	#value
 	#changedValue = false
 
-	constructor(target, {get, equal, ...options}={}) {
+	/**
+	 * @param {HTMLElement} target
+	 */
+	constructor(target, {get=undefined, equal=undefined, ...options}={}) {
+		// @ts-ignore
 		super(options)
 		this[target] = target
 
@@ -385,19 +389,19 @@ export class ObservableElement extends Observable {
 	get value() { return this.#value }
 
 	update() {
-		const current = this.#getValue(this[target])
+		const current = this.#getValue(this.target)
 
 		if (this.#equal(this.#value, current)) return
 
 		this.#value = current
 
 		if (this.synchronous) {
-			this.dispatchEvent(new MultiChangeEvent(["value", current]))
+			this.dispatchEvent(new ValueChangeEvent(["value", current]))
 		} else {
 			if (!this.#changedValue) {
 				queueMicrotask(() => {
 					this.#changedValue = false
-					this.dispatchEvent(new MultiChangeEvent(["value", this.#changedValue]))
+					this.dispatchEvent(new ValueChangeEvent(["value", this.#changedValue]))
 				})
 				this.#changedValue = current
 			}
@@ -407,18 +411,31 @@ export class ObservableElement extends Observable {
 
 export class MapStorage extends Storage {
 	#map = new Map()
+	/**
+	 * @param {number} index
+	 * @return {string}
+	 */
 	key(index) {
 		return [...this.#map.keys()][index]
 	}
+	/**
+	 * @param {string} keyName
+	 * @return {any}
+	 */
 	getItem(keyName) {
 		if (this.#map.has(keyName))
 			return this.#map.get(keyName)
 		else
 			return null
 	}
+	/**
+	 * @param {string} keyName
+	 * @param {any} keyValue
+	 */
 	setItem(keyName, keyValue) {
 		this.#map.set(keyName, String(keyValue))
 	}
+	/** @param {string} keyName */
 	removeItem(keyName) {
 		this.#map.delete(keyName)
 	}
