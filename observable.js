@@ -15,7 +15,7 @@ const target = Symbol("Proxy Target")
 export class SynchronousChangeEvent extends Event {
 	constructor(change) {
 		super('synchronous', {cancelable: true})
-		this.change = change
+		this.change = Object.freeze(change)
 	}
 }
 
@@ -74,10 +74,10 @@ export class Observable extends EventTarget {
 	#ref = new WeakRef(this)
 	get ref() { return this.#ref }
 
-	observable = true
-
-	constructor({synchronous}={}) {
+	constructor({synchronous=false}={}) {
 		super()
+		Object.defineProperty(this, "observable", {value: true, configurable: false, writable: false})
+
 		if (this.constructor === Observable) {
 			throw new TypeError("Cannot instantiate abstract class")
 		}
@@ -367,7 +367,7 @@ export class ObservableElement extends Observable {
 	constructor(target, {get=undefined, equal=undefined, ...options}={}) {
 		// @ts-ignore
 		super(options)
-		this[target] = target
+		Object.defineProperty(this, "target", {value: target, configurable: false, writable: false})
 
 		this.#getValue = get ?? (target => target.value)
 		this.#equal = equal ?? ((a, b) => a===b)
