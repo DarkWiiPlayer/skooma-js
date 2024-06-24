@@ -12,17 +12,31 @@ const target = Symbol("Proxy Target")
 
 /* Custom Event Classes */
 
+/**
+ * @typedef {Object} Change
+ * @property {string} property
+ * @property {any} from
+ * @property {any} to
+ * @property {boolean} mutation - The change happened inside the value without a new assignment
+ */
+
+/** Event fired for every change before the internal state has been updated that can be canceled. */
 export class SynchronousChangeEvent extends Event {
+	/** @param {Change} change */
 	constructor(change) {
 		super('synchronous', {cancelable: true})
 		this.change = Object.freeze(change)
 	}
 }
 
+/** Event fired for one or more changed values after the internal state has been updated. */
 export class MultiChangeEvent extends Event {
+	/** @type {any} */
 	#final
+	/** @type {any} */
 	#values
 
+	/** @param {Change[]} changes */
 	constructor(...changes) {
 		super('change')
 		this.changes = changes
@@ -67,7 +81,7 @@ export class ValueChangeEvent extends MultiChangeEvent {
 
 export class Observable extends EventTarget {
 	#synchronous
-	/** @type Array<{name:string, from, to}> */
+	/** @type Change[]> */
 	#queue
 	#abortController = new AbortController
 
@@ -89,24 +103,37 @@ export class Observable extends EventTarget {
 		})
 	}
 
-	proxy(prop, {get, set, ...options}={}) {
+	/**
+	 * @param {string} prop
+	 */
+	proxy(prop, {get=undefined, set=undefined, ...options}={}) {
 		const proxy = new ProxiedObservableValue(this, prop, options)
 		if (get) proxy.get = get
 		if (set) proxy.set = set
 		return proxy
 	}
 
+	/**
+	 * @param {string} prop
+	 * @param {function} callback
+	 */
 	subscribe(prop, callback) {
-		if (!callback) return this.subscribe("value", prop)
-
 		const controller = new AbortController()
+		// @ts-ignore
 		this.addEventListener("change", ({final}) => {
 			if (final.has(prop)) return callback(final.get(prop))
 		}, {signal: controller.signal})
-		callback(this.value)
+
+		callback(this[prop])
 		return () => controller.abort()
 	}
 
+	/** Queues up a change event
+	 * @param {string} property - Name of the changed property
+	 * @param {any} from
+	 * @param {any} to
+	 * @param {boolean} mutation - whether a change was an assignment or a mutation (nested change)
+	 */
 	enqueue(property, from, to, mutation=false) {
 		const change = {property, from, to, mutation}
 		if (!this.dispatchEvent(new SynchronousChangeEvent(change))) return false
@@ -125,7 +152,8 @@ export class Observable extends EventTarget {
 		return true
 	}
 
-	emit() {
+	/** @param {any[]} _args */
+	emit(..._args) {
 		throw new TypeError(`${this.constructor.name} did not define an 'emit' method`)
 	}
 
@@ -214,6 +242,14 @@ export class ObservableValue extends Observable {
 		if (this.enqueue("value", this.#value, value)) {
 			this.#value = value
 		}
+	}
+
+	/**
+	 * @param {function(any):undefined} callback
+	 * @param {function(any):undefined} _callback
+	 */
+	subscribe(callback, _callback) {
+		this.constructor.prototype.subscribe.call(this, "value", callback)
 	}
 
 	emit(...changes) {
