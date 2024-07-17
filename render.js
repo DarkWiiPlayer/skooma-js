@@ -19,78 +19,33 @@ export const empty = Symbol("Explicit empty argument for Skooma")
 * @param {string} key
 * @return {string}
 */
-const snakeToCSS = key => key.replace(/^[A-Z]/, a => "-"+a).replace(/[A-Z]/g, a => '-'+a.toLowerCase())
-
-/**
-* @param {CSSStyleDeclaration} style The style property of a node
-* @param {object} rules A map of snake case property names to css values
-*/
-const insertStyles = (style, rules) => {
-	for (const [key, value] of Object.entries(rules))
-		if (typeof value == "undefined")
-			style.removeProperty(snakeToCSS(key))
-	else
-		style.setProperty(snakeToCSS(key), value.toString())
-}
+const snakeToCSS = key => key.replace(/^[A-Z]/, a => "-" + a).replace(/[A-Z]/g, a => '-' + a.toLowerCase())
 
 /** @typedef SpecialAttributeDescriptor
 * @type {object}
-* @property {function(this:any):void} [get]
-* @property {function(this:any,any):void} [set]
-* @property {function(this:any,function():void):void} [hook]
+* @property {function(Node):void} [get]
+* @property {function(Node,any):void} [set]
+* @property {function(Node,function(any):void):void} [subscribe]
+* @property {function(Node):boolean} [filter]
 */
 
 /**
-* @type {Object<string,SpecialAttributeDescriptor>}
-*/
-const specialAttributes = {
-	value: {
-		get() { return this.value },
-		set(value) {
-			this.setAttribute("value", value)
-			this.value = value
-		},
-		hook(callback) { this.addEventListener("input", callback) }
-	},
-	style: {
-		set(value) { insertStyles(this.style, value) }
-	},
-	dataset: {
-		set(value) {
-			for (const [attribute2, value2] of Object.entries(value)) {
-				this.dataset[attribute2] = processAttribute(value2)
-			}
-		}
-	},
-	shadowRoot: {
-		set(value) {
-			processArgs((this.shadowRoot || this.attachShadow({mode: "open"})), value)
-		}
-	}
-}
-
-const processAttribute = attribute => {
-	if (typeof attribute == "string" || typeof attribute == "number")
-		return attribute
-	else if (attribute && "join" in attribute)
-		return attribute.join(" ")
-	else
-		return JSON.stringify(attribute)
-}
-
-/** Returns a fallback if value is defined */
-const defined = (value, fallback) => typeof value != "undefined" ? value : fallback
+ * Returns a fallback if value is fallback
+ * @param {any} value
+ * @param {any} whenUndefined
+ */
+const fallback = (value, whenUndefined) => typeof value != "undefined" ? value : whenUndefined
 
 /** Recursively finds the last 'is' attribute in a list nested array of objects
 * @param {Array} args
 */
 const getCustom = args => args.reduce(
 	(current, argument) => Array.isArray(argument)
-		? defined(getCustom(argument), current)
+		? fallback(getCustom(argument), current)
 		: (argument && typeof argument == "object")
-		? defined(argument.is, current)
-		: current
-	,undefined
+			? fallback(argument.is, current)
+			: current
+	, undefined
 )
 
 /**
@@ -99,163 +54,32 @@ const getCustom = args => args.reduce(
 * @property {any} value
 */
 
-/** Returns whether an object is an observable according to skooma's contract
-* @param {any} object
-* @return {object is Observable}
-*/
-export const isObservable = object => object && object.observable
-
-/** Turns an argument into something that can be inserted as a child into a DOM node
-* @param {any} value
-* @return {Element|Text}
-*/
-const toElement = value => {
-	if (typeof value == "string" || typeof value == "number")
-		return document.createTextNode(value.toString())
-	else if (value instanceof Element)
-		return value
-	else if (isObservable(value))
-		return reactiveElement(value)
-}
-
-class ReplaceEvent extends Event {
+/** Cancelable event triggered when a reactive element gets replaced with something else */
+export class BeforeReplaceEvent extends Event {
 	/** @param {Element|Text} next */
 	constructor(next) {
-		super("replace", {bubbles: true, cancelable: true})
+		super("beforereplace", { cancelable: true })
 		this.next = next
 	}
 }
 
-class ReplacedEvent extends Event {
+/** Event triggered when a reactive element was replaced */
+export class AfterReplaceEvent extends Event {
 	/** @param {Element|Text} next */
 	constructor(next) {
-		super("replaced")
+		super("afterreplace")
 		this.next = next
 	}
 }
 
-/** @type {WeakMap<Text|Element,Text|Element>} */
-export const newer = new WeakMap()
-
-/**
-* @param {Observable} observable
-* @return {Element|Text}
-*/
-export const reactiveElement = observable => {
-	const element = toElement(observable.value)
-	untilDeathDoThemPart(element, observable)
-	const ref = new WeakRef(element)
-	observable.addEventListener("change", () => {
-		const next = reactiveElement(observable)
-		const element = ref.deref()
-		if (element.dispatchEvent(new ReplaceEvent(next)))
-			element.replaceWith(next)
-		newer.set(this, next)
-		element.dispatchEvent(new ReplacedEvent(next))
-	}, {once: true})
-	return element
-}
-
-/** Set an attribute on an element
-* @param {Element} element
-* @param {string} attribute
-* @param {any} value
-* @param {AbortSignal} [cleanupSignal]
-*/
-const setAttribute = (element, attribute, value, cleanupSignal) => {
-	const special = specialAttributes[attribute]
-	if (isObservable(value))
-		setReactiveAttribute(element, attribute, value)
-	else if (typeof value === "function")
-		element.addEventListener(attribute, value, {signal: cleanupSignal})
-	else if (special?.set)
-		special.set.call(element, value)
-	else if (value === true)
-		{if (!element.hasAttribute(attribute)) element.setAttribute(attribute, '')}
-	else if (value === false)
-		element.removeAttribute(attribute)
-	else {
-		element.setAttribute(attribute, processAttribute(value))
+/** Event triggered when a new element replaces an old one */
+export class ReplacedEvent extends Event {
+	/** @param {Element|Text} old */
+	constructor(old) {
+		super("replaced", { bubbles: true })
+		this.old = old
 	}
 }
-
-/** Set up a binding between an attribute and an observable
-* @param {Element} element
-* @param {string} attribute
-* @param {Observable} observable
-*/
-const setReactiveAttribute = (element, attribute, observable) => {
-	const multiAbort = new MultiAbortController()
-
-	observable.addEventListener("change", () => {
-		multiAbort.abort()
-		setAttribute(element, attribute, observable.value, multiAbort.signal)
-	})
-	setAttribute(element, attribute, observable.value, multiAbort.signal)
-
-	const special = specialAttributes[attribute]
-	if (special.hook) {
-		untilDeathDoThemPart(element, observable)
-		special.hook.call(element, () => {
-			const current = special.get.call(element, attribute)
-			if (current != observable.value) observable.value = current
-		})
-	}
-}
-
-/** Processes a list of arguments for an HTML Node
-* @param {Element} element
-* @param {Array} args
-*/
-const processArgs = (element, ...args) => {
-	for (const arg of args) if (arg !== empty) {
-		if (Array.isArray(arg)) {
-			processArgs(element, ...arg)
-		} else {
-			const child = toElement(arg)
-			if (child)
-				element.append(child)
-			else if (arg === undefined || arg == null)
-				console.warn(`An argument of type ${typeof arg} has been ignored`, element)
-			else if (typeof arg == "function" && arg.length == 0)
-				processArgs(element, arg())
-			else if (typeof arg == "function")
-				arg(element)
-			else
-				for (const key in arg)
-					setAttribute(element, key, arg[key])
-		}
-	}
-}
-
-/** Creates a new node
-* @param {String} name
-* @param {Array} args
-* @param {Object} options
-*/
-const node = (name, args, options) => {
-	let element
-	const custom = getCustom(args)
-	const opts = custom && {is: String(custom)}
-
-	if ("nameFilter" in options) name = options.nameFilter(name)
-	if (options.xmlns)
-		element = document.createElementNS(options.xmlns, name, opts)
-	else
-		element = document.createElement(name, opts)
-	processArgs(element, args)
-	return element
-}
-
-const nameSpacedProxy = (options={}) => new Proxy(Window, {
-	/** @param {string} prop */
-	get: (_target, prop, _receiver) => { return (...args) => node(prop, args, options) },
-	has: (_target, _prop) => true,
-})
-
-export const html = nameSpacedProxy({nameFilter: name => name.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()})
-export const svg = nameSpacedProxy({xmlns: "http://www.w3.org/2000/svg"})
-export default html
 
 // Other utility exports
 
@@ -265,38 +89,353 @@ export default html
 */
 export const handle = fn => event => { event.preventDefault(); return fn(event) }
 
-/** Wraps a list of elements in a document fragment
-* @param {Array<Element|String>} elements
-*/
-export const fragment = (...elements) => {
-	const fragment = new DocumentFragment()
-	for (const element of elements)
-		fragment.append(toElement(element))
-	return fragment
-}
 
-/** Turns a template literal into document fragment.
-* Strings are returned as text nodes.
-* Elements are inserted in between.
-* @param {Array<String>} literals
-* @param {Array<any>} items
-* @return {DocumentFragment}
-*/
-const textFromTemplate = (literals, items) => {
-	const fragment = new DocumentFragment()
-	for (const key in items) {
-		fragment.append(document.createTextNode(literals[key]))
-		fragment.append(toElement(items[key]))
+/** A reference to an element that follows it around through replacements */
+export class Ref {
+	/** @type {WeakMap<Text|Element,Text|Element>} */
+	static #map = new WeakMap()
+
+	/** @type {Element} */
+	#element
+
+	/** @param {Element} element */
+	constructor(element) {
+		this.#element = element
 	}
-	fragment.append(document.createTextNode(literals[literals.length-1]))
-	return fragment
+
+	/** @return {Element} */
+	deref() {
+		const next = this.constructor.newer(this.#element)
+		if (next) {
+			this.#element = next
+			return this.deref()
+		} else {
+			return this.#element
+		}
+	}
+
+	/** @param {Element} element */
+	static newer(element) {
+		return this.#map.get(element)
+	}
+
+	/**
+	 * @param {Element} previous
+	 * @param {Element} next
+	 */
+	static replace(previous, next) {
+		if (this.newer(previous))
+			throw "Element has already been replaced with newer one"
+		this.#map.set(previous, next)
+	}
 }
 
-/**
-* @param {String|Array<String>} data
-* @param {Array<String|Element>} items
-*/
-export const text = (data="", ...items) =>
-	Array.isArray(data)
-		? textFromTemplate(data, items)
-		: document.createTextNode(data)
+/** Main class doing all the rendering */
+export class Renderer {
+	static proxy() {
+		return new Proxy(new this(), {
+			get: (renderer, prop) => (...args) => renderer.node(prop, args),
+			has: (renderer, prop) => renderer.nodeSupported(prop),
+		})
+	}
+
+	node(name, ...args) {
+		throw "Attempting to use an abstract Renderer"
+	}
+
+	nodeSupported(name) {
+		return true
+	}
+
+	/** Turns an attribute value into a string */
+	static serialiseAttributeValue(value) {
+		if (typeof value == "string" || typeof value == "number")
+			return value
+		else if (value && "join" in value)
+			return value.join(" ")
+		else if (Object.getPrototypeOf(value) == Object.prototype)
+			return JSON.stringify(value)
+		else
+			return value.toString()
+	}
+}
+
+export class DomRenderer extends Renderer {
+	/** @type {Object<string,SpecialAttributeDescriptor>} */
+	static specialAttributes = Object.freeze({})
+
+	/** Processes a list of arguments for an HTML Node
+	 * @param {Element} element
+	 * @param {Array} args
+	 */
+	static apply(element, ...args) {
+		for (const arg of args) if (arg !== empty) {
+			if (Array.isArray(arg)) {
+				this.apply(element, ...arg)
+			} else {
+				const child = this.toElement(arg)
+				if (child)
+					element.append(child)
+				else if (typeof arg == "function")
+					this.apply(element, arg(element) || empty)
+				else if (arg && typeof(arg)=="object")
+					for (const key in arg)
+						this.setAttribute(element, key, arg[key])
+				else
+					console.warn(`An argument of type ${typeof arg} has been ignored`, element)
+			}
+		}
+	}
+
+	/** Creates a new node
+	 * @param {String} name
+	 * @param {Array} args
+	 */
+	node(name, args) {
+		const custom = getCustom(args)
+		const opts = custom && { is: String(custom) }
+
+		const element = this.createElement(name, opts)
+		this.constructor.apply(element, args)
+		return element
+	}
+
+	/**
+	 * @protected
+	 * @param {String} name
+	 * @param {Object} options
+	 * @return {Node}
+	 */
+	createElement(name, options) {
+		return document.createElement(name, options)
+	}
+
+	/** Turns an argument into something that can be inserted as a child into a DOM node
+	 * @protected
+	 * @param {any} value
+	 * @return {Element|Text}
+	 */
+	static toElement(value) {
+		if (typeof value == "string" || typeof value == "number")
+			return document.createTextNode(value.toString())
+		else if (value instanceof Element)
+			return value
+		else if (this.isObservable(value))
+			return this.toReactiveElement(value)
+	}
+
+	/**
+	 * @protected
+	 * @param {Observable} observable
+	 * @return {Element|Text}
+	 */
+	static toReactiveElement(observable) {
+		const element = this.toElement(observable.value)
+		untilDeathDoThemPart(element, observable)
+		let ref = new WeakRef(element)
+
+		const handleChange = () => {
+			const element = ref.deref()
+
+			if (!element) return
+
+			const next = this.toElement(observable.value)
+			if (element?.dispatchEvent(new BeforeReplaceEvent(next))) {
+				element.replaceWith(next)
+				Ref.replace(element, next)
+				next.dispatchEvent(new ReplacedEvent(element))
+				element.dispatchEvent(new AfterReplaceEvent(next))
+				ref = new WeakRef(next)
+			}
+			observable.addEventListener("change", handleChange, {once: true})
+		}
+		observable.addEventListener("change", handleChange, {once: true})
+
+		return element
+	}
+
+	/** Set an attribute on an element
+	 * @protected
+	 * @param {Element} element
+	 * @param {string} attribute
+	 * @param {any} value
+	 * @param {AbortSignal} [cleanupSignal]
+	 */
+	static setAttribute(element, attribute, value, cleanupSignal) {
+		const special = this.getSpecialAttribute(element, attribute)
+
+		if (this.isObservable(value))
+			this.setReactiveAttribute(element, attribute, value)
+		else if (typeof value === "function")
+			element.addEventListener(attribute, value, { signal: cleanupSignal })
+		else if (special?.set)
+			special.set(element, value)
+		else if (value === true)
+			{ if (!element.hasAttribute(attribute)) element.setAttribute(attribute, '') }
+		else if (value === false)
+			element.removeAttribute(attribute)
+		else {
+			element.setAttribute(attribute, this.serialiseAttributeValue(value))
+		}
+	}
+
+	/** Set up a binding between an attribute and an observable
+	 * @protected
+	 * @param {Element} element
+	 * @param {string} attribute
+	 * @param {Observable} observable
+	 */
+	static setReactiveAttribute(element, attribute, observable) {
+		const multiAbort = new MultiAbortController()
+
+		observable.addEventListener("change", () => {
+			multiAbort.abort()
+			this.setAttribute(element, attribute, observable.value, multiAbort.signal)
+		})
+		this.setAttribute(element, attribute, observable.value, multiAbort.signal)
+
+		const special = this.getSpecialAttribute(element, attribute)
+
+		if (special?.subscribe) {
+			untilDeathDoThemPart(element, observable)
+			special.subscribe(element, value => {
+				if (value != observable.value) observable.value = value
+			})
+		}
+	}
+
+	/**
+	* @param {CSSStyleDeclaration} style The style property of a node
+	* @param {object} rules A map of snake case property names to css values
+	*/
+	static insertStyles(style, rules) {
+		for (const [key, value] of Object.entries(rules))
+			if (typeof value == "undefined")
+				style.removeProperty(snakeToCSS(key))
+			else
+				style.setProperty(snakeToCSS(key), value.toString())
+	}
+
+	/** Returns whether an object is an observable according to skooma's contract
+	* @param {any} object
+	* @return {object is Observable}
+	*/
+	static isObservable(object) {
+		return object && object.observable
+	}
+
+	/** Wraps a list of elements in a document fragment
+	* @param {Array<Element|String>} elements
+	*/
+	static documentFragment(...elements) {
+		const fragment = new DocumentFragment()
+		for (const element of elements)
+			fragment.append(this.toElement(element))
+		return fragment
+	}
+
+	/**
+	 * @protected
+	 * @param {Element} element
+	 * @param {String} attribute
+	 */
+	static getSpecialAttribute(element, attribute) {
+		const special = this.specialAttributes[attribute]
+		if (special?.filter == undefined)
+			return special
+		if (special.filter.call(element))
+			return special
+		return undefined
+	}
+
+	/**
+	* @param {String|Array<String>} data
+	* @param {Array<String|Element>} items
+	*/
+	static createTextOrFragment(data = "", ...items) {
+		return Array.isArray(data)
+			? this.textFromTemplate(data, items)
+			: document.createTextNode(data)
+	}
+
+	/** Turns a template literal into document fragment.
+	 * Strings are returned as text nodes.
+	 * Elements are inserted in between.
+	 * @param {Array<String>} literals
+	 * @param {Array<any>} items
+	 * @return {DocumentFragment}
+	 */
+	static textFromTemplate(literals, items) {
+		const fragment = new DocumentFragment()
+		for (const key in items) {
+			fragment.append(document.createTextNode(literals[key]))
+			fragment.append(toElement(items[key]))
+		}
+		fragment.append(document.createTextNode(literals[literals.length - 1]))
+		return fragment
+	}
+}
+
+/** Renderer for normal HTML nodes targetting a browser's DOM */
+export class DomHtmlRenderer extends DomRenderer {
+	/**
+	 * @param {String} name
+	 * @param {Object} options
+	 * @return {Node}
+	 */
+	createElement(name, options) {
+		return document.createElement(name.replace(/([a-z])([A-Z])/g, "$1-$2"), options)
+	}
+
+	/** @type {Object<string,SpecialAttributeDescriptor>} */
+	static specialAttributes = {
+		value: {
+			get(element) { return element.value },
+			set(element, value) {
+				element.setAttribute("value", value)
+				element.value = value
+			},
+			subscribe(element, callback) {
+				element.addEventListener("input", () => {
+					callback(this.get(element))
+				})
+			},
+			filter(element) { return element.nodeName.toLowerCase() == "input" }
+		},
+		style: {
+			set(element, value) { DomRenderer.insertStyles(element.style, value) }
+		},
+		dataset: {
+			set(element, value) {
+				for (const [attribute2, value2] of Object.entries(value)) {
+					element.dataset[attribute2] = DomRenderer.serialiseAttributeValue(value2)
+				}
+			}
+		},
+		shadowRoot: {
+			set(element, value) {
+				apply((element.shadowRoot || element.attachShadow({ mode: "open" })), value)
+			}
+		}
+	}
+}
+
+/** Renderer for normal SVG nodes targetting a browser's DOM */
+export class DomSvgRenderer extends DomRenderer {
+	/**
+	 * @param {String} name
+	 * @param {Object} options
+	 * @return {Node}
+	 */
+	createElement(name, options) {
+		return document.createElementNS("http://www.w3.org/2000/svg", name, options)
+	}
+}
+
+export const html = DomHtmlRenderer.proxy()
+export const svg = DomSvgRenderer.proxy()
+
+export const fragment = DomRenderer.documentFragment.bind(DomRenderer)
+export const text = DomRenderer.createTextOrFragment.bind(DomRenderer)
+
+export default html
