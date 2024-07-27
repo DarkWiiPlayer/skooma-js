@@ -1,13 +1,19 @@
 // Keep a referee alive until a referrer is collected
 const weakReferences = new WeakMap()
+
+/** Keeps the referenced value alive until the referrer is collected
+ * @param {Object} referrer
+ * @param {Object} reference
+ */
 const untilDeathDoThemPart = (referrer, reference) => {
 	if (!weakReferences.has(referrer)) weakReferences.set(referrer, new Set())
 	weakReferences.get(referrer).add(reference)
 }
 
-// Like AbortController, but resets after each abort
+/** Like AbortController, but resets after each abort */
 class MultiAbortController {
 	#controller = new AbortController()
+	/** @return {AbortSignal} */
 	get signal() { return this.#controller.signal }
 	abort() { this.#controller.abort(); this.#controller = new AbortController() }
 }
@@ -48,11 +54,7 @@ const getCustom = args => args.reduce(
 	, undefined
 )
 
-/**
-* @typedef Observable
-* @type {EventTarget|object}
-* @property {any} value
-*/
+/** @typedef {EventTarget & {value: any}} Observable */
 
 /** Cancelable event triggered when a reactive element gets replaced with something else */
 export class BeforeReplaceEvent extends Event {
@@ -95,17 +97,17 @@ export class Ref {
 	/** @type {WeakMap<Text|Element,Text|Element>} */
 	static #map = new WeakMap()
 
-	/** @type {Element} */
+	/** @type {Element|Text} */
 	#element
 
-	/** @param {Element} element */
+	/** @param {Element|Text} element */
 	constructor(element) {
 		this.#element = element
 	}
 
-	/** @return {Element} */
+	/** @return {Element|Text} */
 	deref() {
-		const next = this.constructor.newer(this.#element)
+		const next = Ref.newer(this.#element)
 		if (next) {
 			this.#element = next
 			return this.deref()
@@ -114,14 +116,14 @@ export class Ref {
 		}
 	}
 
-	/** @param {Element} element */
+	/** @param {Element|Text} element */
 	static newer(element) {
 		return this.#map.get(element)
 	}
 
 	/**
-	 * @param {Element} previous
-	 * @param {Element} next
+	 * @param {Element|Text} previous
+	 * @param {Element|Text} next
 	 */
 	static replace(previous, next) {
 		if (this.newer(previous))
@@ -134,20 +136,25 @@ export class Ref {
 export class Renderer {
 	static proxy() {
 		return new Proxy(new this(), {
-			get: (renderer, prop) => (...args) => renderer.node(prop, args),
+			/** @param {string} prop */
+			get: (renderer, prop) => /** @param {any[]} args */ (...args) => renderer.node(prop, args),
 			has: (renderer, prop) => renderer.nodeSupported(prop),
 		})
 	}
 
+	/** @param {string} name */
 	node(name, ...args) {
 		throw "Attempting to use an abstract Renderer"
 	}
 
+	/** @param {string|symbol} name */
 	nodeSupported(name) {
+		if (typeof(name) != "string") return false
 		return true
 	}
 
 	/** Turns an attribute value into a string */
+	/** @param {any} value */
 	static serialiseAttributeValue(value) {
 		if (typeof value == "string" || typeof value == "number")
 			return value
@@ -165,7 +172,7 @@ export class DomRenderer extends Renderer {
 	static specialAttributes = Object.freeze({})
 
 	/** Processes a list of arguments for an HTML Node
-	 * @param {Element} element
+	 * @param {Element|ShadowRoot} element
 	 * @param {Array} args
 	 */
 	static apply(element, ...args) {
@@ -180,7 +187,10 @@ export class DomRenderer extends Renderer {
 					this.apply(element, arg(element) || empty)
 				else if (arg && typeof(arg)=="object")
 					for (const key in arg)
-						this.setAttribute(element, key, arg[key])
+						if (element instanceof Element)
+							this.setAttribute(element, key, arg[key])
+						else
+							throw `Attempting to set attributes on a non-element (${element.constructor.name})`
 				else
 					console.warn(`An argument of type ${typeof arg} has been ignored`, element)
 			}
@@ -343,7 +353,7 @@ export class DomRenderer extends Renderer {
 		const special = this.specialAttributes[attribute]
 		if (special?.filter == undefined)
 			return special
-		if (special.filter.call(element))
+		if (special.filter(element))
 			return special
 		return undefined
 	}
@@ -369,7 +379,7 @@ export class DomRenderer extends Renderer {
 		const fragment = new DocumentFragment()
 		for (const key in items) {
 			fragment.append(document.createTextNode(literals[key]))
-			fragment.append(toElement(items[key]))
+			fragment.append(this.toElement(items[key]))
 		}
 		fragment.append(document.createTextNode(literals[literals.length - 1]))
 		return fragment
@@ -390,22 +400,30 @@ export class DomHtmlRenderer extends DomRenderer {
 	/** @type {Object<string,SpecialAttributeDescriptor>} */
 	static specialAttributes = {
 		value: {
+			/** @param {HTMLInputElement} element */
 			get(element) { return element.value },
+			/** @param {HTMLInputElement} element */
 			set(element, value) {
 				element.setAttribute("value", value)
 				element.value = value
 			},
+			/** @param {HTMLInputElement} element */
 			subscribe(element, callback) {
 				element.addEventListener("input", () => {
 					callback(this.get(element))
 				})
 			},
-			filter(element) { return element.nodeName.toLowerCase() == "input" }
+			/** @param {HTMLElement} element */
+			filter(element) {
+				return element.nodeName.toLowerCase() == "input"
+			}
 		},
 		style: {
+			/** @param {HTMLElement} element */
 			set(element, value) { DomRenderer.insertStyles(element.style, value) }
 		},
 		dataset: {
+			/** @param {HTMLElement} element */
 			set(element, value) {
 				for (const [attribute2, value2] of Object.entries(value)) {
 					element.dataset[attribute2] = DomRenderer.serialiseAttributeValue(value2)
@@ -413,8 +431,12 @@ export class DomHtmlRenderer extends DomRenderer {
 			}
 		},
 		shadowRoot: {
+			/** @param {HTMLElement} element */
 			set(element, value) {
-				apply((element.shadowRoot || element.attachShadow({ mode: "open" })), value)
+				DomRenderer.apply(
+					(element.shadowRoot || element.attachShadow({ mode: "open" })),
+					value
+				)
 			}
 		}
 	}
