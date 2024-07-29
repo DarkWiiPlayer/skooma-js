@@ -22,18 +22,18 @@ class MultiAbortController {
 export const empty = Symbol("Explicit empty argument for Skooma")
 
 /** Converts a snake-case string to a CSS property name
-* @param {string} key
-* @return {string}
-*/
+ * @param {string} key
+ * @return {string}
+ */
 const snakeToCSS = key => key.replace(/^[A-Z]/, a => "-" + a).replace(/[A-Z]/g, a => '-' + a.toLowerCase())
 
 /** @typedef SpecialAttributeDescriptor
-* @type {object}
-* @property {function(Node):void} [get]
-* @property {function(Node,any):void} [set]
-* @property {function(Node,function(any):void):void} [subscribe]
-* @property {function(Node):boolean} [filter]
-*/
+ * @type {object}
+ * @property {function(Node):void} [get]
+ * @property {function(Node,any):void} [set]
+ * @property {function(Node,function(any):void):void} [subscribe]
+ * @property {function(Node):boolean} [filter]
+ */
 
 /**
  * Returns a fallback if value is fallback
@@ -41,18 +41,6 @@ const snakeToCSS = key => key.replace(/^[A-Z]/, a => "-" + a).replace(/[A-Z]/g, 
  * @param {any} whenUndefined
  */
 const fallback = (value, whenUndefined) => typeof value != "undefined" ? value : whenUndefined
-
-/** Recursively finds the last 'is' attribute in a list nested array of objects
-* @param {Array} args
-*/
-const getCustom = args => args.reduce(
-	(current, argument) => Array.isArray(argument)
-		? fallback(getCustom(argument), current)
-		: (argument && typeof argument == "object")
-			? fallback(argument.is, current)
-			: current
-	, undefined
-)
 
 /** @typedef {EventTarget & {value: any}} Observable */
 
@@ -86,9 +74,9 @@ export class ReplacedEvent extends Event {
 // Other utility exports
 
 /** Wraps an event handler in a function that calls preventDefault on the event
-* @param {function(event) : event} fn
-* @return {function(event)}
-*/
+ * @param {function(event) : event} fn
+ * @return {function(event)}
+ */
 export const handle = fn => event => { event.preventDefault(); return fn(event) }
 
 
@@ -202,10 +190,7 @@ export class DomRenderer extends Renderer {
 	 * @param {Array} args
 	 */
 	node(name, args) {
-		const custom = getCustom(args)
-		const opts = custom && { is: String(custom) }
-
-		const element = this.createElement(name, opts)
+		const element = this.createElement(name)
 		this.constructor.apply(element, args)
 		return element
 	}
@@ -216,7 +201,7 @@ export class DomRenderer extends Renderer {
 	 * @param {Object} options
 	 * @return {Node}
 	 */
-	createElement(name, options) {
+	createElement(name, options={}) {
 		return document.createElement(name, options)
 	}
 
@@ -315,9 +300,9 @@ export class DomRenderer extends Renderer {
 	}
 
 	/**
-	* @param {CSSStyleDeclaration} style The style property of a node
-	* @param {object} rules A map of snake case property names to css values
-	*/
+	 * @param {CSSStyleDeclaration} style The style property of a node
+	 * @param {object} rules A map of snake case property names to css values
+	 */
 	static insertStyles(style, rules) {
 		for (const [key, value] of Object.entries(rules))
 			if (typeof value == "undefined")
@@ -327,16 +312,16 @@ export class DomRenderer extends Renderer {
 	}
 
 	/** Returns whether an object is an observable according to skooma's contract
-	* @param {any} object
-	* @return {object is Observable}
-	*/
+	 * @param {any} object
+	 * @return {object is Observable}
+	 */
 	static isObservable(object) {
 		return object && object.observable
 	}
 
 	/** Wraps a list of elements in a document fragment
-	* @param {Array<Element|String>} elements
-	*/
+	 * @param {Array<Element|String>} elements
+	 */
 	static documentFragment(...elements) {
 		const fragment = new DocumentFragment()
 		for (const element of elements)
@@ -359,9 +344,9 @@ export class DomRenderer extends Renderer {
 	}
 
 	/**
-	* @param {String|Array<String>} data
-	* @param {Array<String|Element>} items
-	*/
+	 * @param {String|Array<String>} data
+	 * @param {Array<String|Element>} items
+	 */
 	static createTextOrFragment(data = "", ...items) {
 		return Array.isArray(data)
 			? this.textFromTemplate(data, items)
@@ -395,6 +380,33 @@ export class DomHtmlRenderer extends DomRenderer {
 	 */
 	createElement(name, options) {
 		return document.createElement(name.replace(/([a-z])([A-Z])/g, "$1-$2"), options)
+	}
+
+	/** Creates a new node and make it a custom element if necessary
+	 * @param {String} name
+	 * @param {Array} args
+	 */
+	node(name, args) {
+		const custom = this.getCustom(args)
+		const opts = custom && { is: String(custom) }
+
+		const element = this.createElement(name, opts)
+		this.constructor.apply(element, args)
+		return element
+	}
+
+	/** Recursively finds the last 'is' attribute in a list nested array of objects
+	 * @param {Array} args
+	 */
+	getCustom(args) {
+		return args.reduce(
+			(current, argument) => Array.isArray(argument)
+				? fallback(this.getCustom(argument), current)
+				: (argument && typeof argument == "object")
+					? fallback(argument.is, current)
+					: current
+			, undefined
+		)
 	}
 
 	/** @type {Object<string,SpecialAttributeDescriptor>} */
