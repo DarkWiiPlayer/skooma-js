@@ -173,6 +173,8 @@ export class DomRenderer extends Renderer {
 					element.append(child)
 				else if (typeof arg == "function")
 					this.apply(element, arg(element) || empty)
+				else if (arg instanceof DocumentFragment)
+					element.append(arg)
 				else if (arg && typeof(arg)=="object")
 					for (const key in arg)
 						if (element instanceof Element)
@@ -225,6 +227,9 @@ export class DomRenderer extends Renderer {
 	 * @return {Element|Text}
 	 */
 	static toReactiveElement(observable) {
+		if (observable.value instanceof DocumentFragment) {
+			throw "Failed to create reactive element: Document fragments cannot be replaced dynamically"
+		}
 		const element = this.toElement(observable.value)
 		untilDeathDoThemPart(element, observable)
 		let ref = new WeakRef(element)
