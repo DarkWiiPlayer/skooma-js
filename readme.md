@@ -4,8 +4,13 @@ A functional-friendly helper library for procedural DOM generation and
 templating.
 
 ```js
-import {html} from "skooma.js"
+import {html} from "skooma/state.js"
 ```
+
+## Warning
+
+**This branch is in the process of being aggressively refactored and improved.
+This readme file may not reflect the latest state of the interface.**
 
 ## Overview
 
@@ -22,7 +27,7 @@ document.body.append(html.div(
 
 ## Interface / Examples
 
-### Basic DOM generation
+### Basic DOM generatio
 
 Accessing the `html` proxy with any string key returns a new node generator
 function:
@@ -89,7 +94,7 @@ text`Hello, ${html.b(user)}!`
 ## handle
 
 ```js
-import {handle} from 'skooma.js'
+import {handle} from 'skooma/state.js'
 ```
 
 Since it is common for event handlers to call `preventDefault()`, skooma
