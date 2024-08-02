@@ -1,11 +1,34 @@
 # Skooma
 
-A functional-friendly helper library for procedural DOM generation and
-templating.
-
 ```js
-import {html} from "skooma/state.js"
+import {html} from "skooma/render.js"
+
+document.body.append(
+	html.p(
+		"This is a paragraph with some text ",
+		html.b("and some bold text "),
+		html.img({
+			alt: "And an image",
+			href: "http://picsum.photos/200/200"
+		})
+	)
+)
 ```
+
+## Goals
+
+1. `skooma/render` should stay small enough to use it as just a helper library
+   to generate some dom nodes in any sort of web environment.
+1. `skooma/observable` should likewise function as a standalone reactive state
+   management library to be used with or without a framework
+1. A developer who doesn't use skooma should be able to read any code using it
+   and piece together what it does based on structure and function names
+1. Skooma should be easy to gradually introduce into an application that uses
+   a different framework or no framework at all
+1. Skooma should make it easy to gradually replace it with a different solution
+   should it prove unfit for a project it is being used in
+1. The library should be hackable so that developers can tweak it for different
+   environments like SSR or frameworks
 
 ## Warning
 
