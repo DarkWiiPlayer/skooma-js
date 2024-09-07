@@ -48,7 +48,7 @@ const fallback = (value, whenUndefined) => typeof value != "undefined" ? value :
 export class BeforeReplaceEvent extends Event {
 	/** @param {Element|Text} next */
 	constructor(next) {
-		super("beforereplace", { cancelable: true })
+		super("skooma:beforereplace", { cancelable: true })
 		this.next = next
 	}
 }
@@ -57,7 +57,7 @@ export class BeforeReplaceEvent extends Event {
 export class AfterReplaceEvent extends Event {
 	/** @param {Element|Text} next */
 	constructor(next) {
-		super("afterreplace")
+		super("skooma:afterreplace")
 		this.next = next
 	}
 }
@@ -66,7 +66,7 @@ export class AfterReplaceEvent extends Event {
 export class ReplacedEvent extends Event {
 	/** @param {Element|Text} old */
 	constructor(old) {
-		super("replaced", { bubbles: true })
+		super("skooma:replaced", { bubbles: true })
 		this.old = old
 	}
 }
