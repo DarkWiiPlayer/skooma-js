@@ -148,10 +148,20 @@ const button = html.button(state, {
 })
 ```
 
-Note that to keep the replacement logic simple, it is not currently possible to
-insert use document fragments, as these could insert several top-level children
-into a component that would then all have to be replaced. When an observable
-contains or changes to a document fragment, skooma will raise an error.
+**Note** that to keep the replacement logic simple, it is not currently possible
+to insert use document fragments, as these could insert several top-level
+children into a component that would then all have to be replaced. When an
+observable contains or changes to a document fragment, skooma will raise an
+error.
+
+When replacing a reactive child, the following events are dispatched:
+
+- `skooma:beforereplace` (cancelable) on the element being replaced while it is
+  still in the DOM.
+- `skooma:afterreplace` on the old element after it was removed from the DOM and
+  replaced with a new one.
+- `skooma:replaced` (bubbles) on the new event after it has replaced the old one
+  and inserted into the DOM.
 
 Before replacing an element, a `"replace"` event is emitted from the old
 element. This event bubbles and is cancelable, and can thus be used both to
@@ -171,4 +181,18 @@ const input_1 = html.input({ type: "number", value: state })
 const input_2 = html.input({ type: "number", value: state })
 ```
 
-TODO: events as for reactive children
+When a reactive attribute is updated to a new value, a `skooma:attribute` event
+is dispatched on the element. Canceling the event will prevent the attribute
+from being changed.
+
+The element has the properties `attribute`, `to` and `from`, representing the
+attribute name new and old values.
+
+## Custom Renderers
+
+Skooma uses a class hierarchy to handle the complexity of generating DOM nodes.
+The `Renderer` class provides the more generic utility functions to build custom
+renderers for targets other than the DOM.
+
+This allows building custom renderers that can work on the back-end by
+outputting elements in a virtual dom or even plain HTML.
