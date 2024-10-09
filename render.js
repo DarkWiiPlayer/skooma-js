@@ -71,6 +71,21 @@ export class ReplacedEvent extends Event {
 	}
 }
 
+/** Event triggered when a reactive attribute changes on an element */
+export class AttributeEvent extends Event {
+	/**
+	 * @param {String} attribute
+	 * @param {any} from
+	 * @param {any} to
+	 */
+	constructor(attribute, from, to) {
+		super("skooma:attribute", { cancelable: true })
+		this.attribute = attribute
+		this.from = from
+		this.to = to
+	}
+}
+
 // Other utility exports
 
 /** Wraps an event handler in a function that calls preventDefault on the event
@@ -265,7 +280,7 @@ export class DomRenderer extends Renderer {
 		const special = this.getSpecialAttribute(element, attribute)
 
 		if (this.isObservable(value))
-			this.setReactiveAttribute(element, attribute, value)
+			{ this.setReactiveAttribute(element, attribute, value) }
 		else if (typeof value === "function")
 			element.addEventListener(attribute, value, { signal: cleanupSignal })
 		else if (special?.set)
@@ -290,7 +305,8 @@ export class DomRenderer extends Renderer {
 
 		observable.addEventListener("change", () => {
 			multiAbort.abort()
-			this.setAttribute(element, attribute, observable.value, multiAbort.signal)
+			if (element.dispatchEvent(new AttributeEvent(attribute, element.getAttribute(attribute), observable.value)))
+				this.setAttribute(element, attribute, observable.value, multiAbort.signal)
 		})
 		this.setAttribute(element, attribute, observable.value, multiAbort.signal)
 
